@@ -1,3 +1,15 @@
 @import "tailwindcss";
 
 
+html.dark {
+  color-scheme: dark;
+}
+
+
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+
