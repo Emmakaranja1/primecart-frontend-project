@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { cn } from '@/utils/helpers';
-import type { Product } from '@/api/productService';
+import type { Product } from '@/types/product';
 
 interface ProductGalleryProps {
   product?: Product;

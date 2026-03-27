@@ -3,7 +3,7 @@ import { ShoppingCart, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
-import type { Product } from '@/api/productService';
+import type { Product } from '@/types/product';
 import { formatCurrency } from '@/utils/helpers';
 import { useCart } from '@/hooks/useCart';
 import { toast } from 'sonner';

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
 import { Skeleton } from '@/ui/Skeleton';
-import type { Product } from '@/api/productService';
+import type { Product } from '@/types/product';
 import { useProducts } from '@/hooks/useProducts';
 
 interface ProductGridProps {
