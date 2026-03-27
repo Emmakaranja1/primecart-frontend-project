@@ -8,6 +8,8 @@ import type {
   AdminUsersQuery,
   ProfileResponse,
   ProfileUser,
+  UpdateProfileRequest,
+  UpdateAddressRequest,
 } from '../api/userService';
 import type { ApiError, ApiResponse } from '../api/httpClient';
 
@@ -21,6 +23,8 @@ type UserStoreState = {
   message: string | null;
 
   getProfile: () => Promise<ProfileResponse>;
+  updateProfile: (payload: UpdateProfileRequest) => Promise<ProfileResponse>;
+  updateAddress: (payload: UpdateAddressRequest) => Promise<ProfileResponse>;
   listAdminUsers: (params?: AdminUsersQuery) => Promise<ApiResponse<AdminUsersData>>;
   activateUser: (id: number) => Promise<AdminUserMutationResponse>;
   deactivateUser: (id: number) => Promise<AdminUserMutationResponse>;
@@ -60,6 +64,32 @@ export const useUserStore = create<UserStoreState>((set) => ({
       const res = await userService.getProfile();
       set({ profile: res.user ?? null, message: res.message ?? null, isLoading: false });
       return res as ProfileResponse;
+    } catch (e) {
+      const apiError = normalizeApiError(e);
+      set({ error: apiError, isLoading: false });
+      throw apiError;
+    }
+  },
+
+  updateProfile: async (payload) => {
+    set({ isLoading: true, error: null, message: null });
+    try {
+      const res = await userService.updateProfile(payload);
+      set({ profile: res.user ?? null, message: res.message ?? null, isLoading: false });
+      return res;
+    } catch (e) {
+      const apiError = normalizeApiError(e);
+      set({ error: apiError, isLoading: false });
+      throw apiError;
+    }
+  },
+
+  updateAddress: async (payload) => {
+    set({ isLoading: true, error: null, message: null });
+    try {
+      const res = await userService.updateAddress(payload);
+      set({ profile: res.user ?? null, message: res.message ?? null, isLoading: false });
+      return res;
     } catch (e) {
       const apiError = normalizeApiError(e);
       set({ error: apiError, isLoading: false });

@@ -5,3 +5,4 @@ export { useProducts } from './useProducts';
 export { useActivityLog } from './useActivityLog';
 export { useReport } from './useReport';
 export { usePayment } from './usePayment';
+export { useUser } from './useUser';

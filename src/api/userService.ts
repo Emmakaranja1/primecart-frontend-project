@@ -87,9 +87,28 @@ export type AdminActivityLogsQuery = {
   limit?: number;
 };
 
+export type UpdateProfileRequest = {
+  username?: string;
+  email?: string;
+  phone_number?: string;
+  address?: string;
+};
+
+export type UpdateAddressRequest = {
+  address: string;
+};
+
 export const userService = {
   getProfile: async (): Promise<ProfileResponse> => {
     return (await httpClient.get<never>('/auth/profile')) as ProfileResponse;
+  },
+
+  updateProfile: async (payload: UpdateProfileRequest): Promise<ProfileResponse> => {
+    return (await httpClient.put<never>('/auth/profile', payload)) as ProfileResponse;
+  },
+
+  updateAddress: async (payload: UpdateAddressRequest): Promise<ProfileResponse> => {
+    return (await httpClient.put<never>('/auth/address', payload)) as ProfileResponse;
   },
 
   listAdminUsers: async (params?: AdminUsersQuery): Promise<ApiResponse<AdminUsersData>> => {
