@@ -1,8 +1,7 @@
 import { ShoppingBag, ArrowRight, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/ui/Card';
-import { formatCurrency } from '@/utils/helpers';
-import { Link } from 'react-router-dom';
+import { formatCurrency, cn } from '@/utils/helpers';
 
 interface CartSummaryProps {
   totalAmount: number;
@@ -69,15 +68,13 @@ export default function CartSummary({
         
         {showCheckoutButton && (
           <CardFooter className="p-8 pt-0">
-            <Link to="/checkout" className="w-full">
-              <Button 
-                className="w-full h-16 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
-                onClick={onCheckout}
-              >
-                <span>Proceed to Checkout</span>
-                <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <Button 
+              className="w-full h-16 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
+              onClick={onCheckout}
+            >
+              <span>Proceed to Checkout</span>
+              <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </CardFooter>
         )}
       </Card>
@@ -101,6 +98,3 @@ export default function CartSummary({
   );
 }
 
-function cn(...classes: (string | undefined | null | boolean)[]) {
-  return classes.filter(Boolean).join(' ');
-}
