@@ -51,7 +51,7 @@ export default function ProductGrid({
   if (error && !isLoading) {
     return (
       <div className="text-center py-32 bg-red-50 dark:bg-red-900/20 rounded-[3rem] border border-red-200 dark:border-red-800 transition-colors duration-300">
-        <p className="text-red-600 dark:text-red-400 font-medium text-lg">Error: {error}</p>
+        <p className="text-red-600 dark:text-red-400 font-medium text-lg">Error: {error?.message || 'An error occurred'}</p>
       </div>
     );
   }

@@ -3,12 +3,34 @@ import { productService } from '../api/productService';
 import type { 
   Product, 
   ProductListQuery, 
+  ProductListData,
+  AdminProductListQuery,
+  AdminCreateProductRequest,
+  AdminUpdateProductRequest,
+  DeleteProductResponse,
 } from '../api/productService';
-import type { ApiError } from '../api/httpClient';
+import type { ApiError, ApiResponse } from '../api/httpClient';
+
+function normalizeApiError(error: unknown): ApiError {
+  if (typeof error === 'object' && error !== null) {
+    const maybe = error as Partial<ApiError>;
+    if (maybe.success === false && typeof maybe.message === 'string') {
+      return {
+        success: false,
+        message: maybe.message,
+        status: typeof maybe.status === 'number' ? maybe.status : undefined,
+        errors: maybe.errors,
+      };
+    }
+  }
+
+  return { success: false, message: 'Request failed' };
+}
 
 interface ProductState {
   products: Product[];
   currentProduct: Product | null;
+  adminProducts: ProductListData | null;
   pagination: {
     currentPage: number;
     perPage: number;
@@ -17,16 +39,24 @@ interface ProductState {
   } | null;
   isLoading: boolean;
   isLoadingProduct: boolean;
-  error: string | null;
-  productError: string | null;
+  error: ApiError | null;
+  productError: ApiError | null;
+  message: string | null;
 }
 
 interface ProductActions {
+  
   listProducts: (params?: ProductListQuery) => Promise<void>;
   getProductById: (id: number) => Promise<void>;
   clearCurrentProduct: () => void;
   clearErrors: () => void;
   setLoading: (loading: boolean) => void;
+  
+
+  listAdminProducts: (params?: AdminProductListQuery) => Promise<void>;
+  createProduct: (payload: AdminCreateProductRequest) => Promise<ApiResponse<{ product: Product }>>;
+  updateProduct: (id: number, payload: AdminUpdateProductRequest) => Promise<ApiResponse<{ product: Product }>>;
+  deleteProduct: (id: number) => Promise<DeleteProductResponse>;
 }
 
 type ProductStore = ProductState & ProductActions;
@@ -35,11 +65,13 @@ export const useProductStore = create<ProductStore>((set) => ({
   
   products: [],
   currentProduct: null,
+  adminProducts: null,
   pagination: null,
   isLoading: false,
   isLoadingProduct: false,
   error: null,
   productError: null,
+  message: null,
 
   
   listProducts: async (params?: ProductListQuery) => {
@@ -63,14 +95,14 @@ export const useProductStore = create<ProductStore>((set) => ({
       } else {
         set({
           isLoading: false,
-          error: response.message || 'Failed to fetch products',
+          error: normalizeApiError(response),
         });
       }
     } catch (error) {
-      const apiError = error as ApiError;
+      const apiError = normalizeApiError(error);
       set({
         isLoading: false,
-        error: apiError.message || 'Failed to fetch products',
+        error: apiError,
       });
     }
   },
@@ -90,14 +122,14 @@ export const useProductStore = create<ProductStore>((set) => ({
       } else {
         set({
           isLoadingProduct: false,
-          productError: response.message || 'Failed to fetch product',
+          productError: normalizeApiError(response),
         });
       }
     } catch (error) {
-      const apiError = error as ApiError;
+      const apiError = normalizeApiError(error);
       set({
         isLoadingProduct: false,
-        productError: apiError.message || 'Failed to fetch product',
+        productError: apiError,
       });
     }
   },
@@ -110,10 +142,138 @@ export const useProductStore = create<ProductStore>((set) => ({
     set({
       error: null,
       productError: null,
+      message: null,
     });
   },
 
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
+  },
+
+  
+  listAdminProducts: async (params?: AdminProductListQuery) => {
+    set({ isLoading: true, error: null, message: null });
+    
+    try {
+      const response = await productService.listAdminProducts(params);
+      
+      if (response.success && response.data) {
+        set({
+          adminProducts: response.data,
+          isLoading: false,
+          error: null,
+          message: response.message || null,
+        });
+      } else {
+        set({
+          isLoading: false,
+          error: normalizeApiError(response),
+          message: null,
+        });
+      }
+    } catch (error) {
+      const apiError = normalizeApiError(error);
+      set({
+        isLoading: false,
+        error: apiError,
+        message: null,
+      });
+    }
+  },
+
+  createProduct: async (payload: AdminCreateProductRequest) => {
+    set({ isLoading: true, error: null, message: null });
+    
+    try {
+      const response = await productService.createProduct(payload);
+      
+      if (response.success) {
+        set({
+          isLoading: false,
+          error: null,
+          message: response.message || 'Product created successfully',
+        });
+        return response;
+      } else {
+        set({
+          isLoading: false,
+          error: normalizeApiError(response),
+          message: null,
+        });
+        return response;
+      }
+    } catch (error) {
+      const apiError = normalizeApiError(error);
+      set({
+        isLoading: false,
+        error: apiError,
+        message: null,
+      });
+      throw apiError;
+    }
+  },
+
+  updateProduct: async (id: number, payload: AdminUpdateProductRequest) => {
+    set({ isLoading: true, error: null, message: null });
+    
+    try {
+      const response = await productService.updateProduct(id, payload);
+      
+      if (response.success) {
+        set({
+          isLoading: false,
+          error: null,
+          message: response.message || 'Product updated successfully',
+        });
+        return response;
+      } else {
+        set({
+          isLoading: false,
+          error: normalizeApiError(response),
+          message: null,
+        });
+        return response;
+      }
+    } catch (error) {
+      const apiError = normalizeApiError(error);
+      set({
+        isLoading: false,
+        error: apiError,
+        message: null,
+      });
+      throw apiError;
+    }
+  },
+
+  deleteProduct: async (id: number) => {
+    set({ isLoading: true, error: null, message: null });
+    
+    try {
+      const response = await productService.deleteProduct(id);
+      
+      if (response.success) {
+        set({
+          isLoading: false,
+          error: null,
+          message: response.message || 'Product deleted successfully',
+        });
+        return response;
+      } else {
+        set({
+          isLoading: false,
+          error: normalizeApiError(response),
+          message: null,
+        });
+        return response;
+      }
+    } catch (error) {
+      const apiError = normalizeApiError(error);
+      set({
+        isLoading: false,
+        error: apiError,
+        message: null,
+      });
+      throw apiError;
+    }
   },
 }));

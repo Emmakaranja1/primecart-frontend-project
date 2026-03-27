@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Save } from 'lucide-react';
-import { Button } from '../../ui/Button';
-import { Input } from '../../ui/Input';
+import { Button } from '@/ui/Button';
+import { Input } from '@/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { toast } from 'sonner';
 import { useUser } from '../../hooks/useUser';

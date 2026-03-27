@@ -5,29 +5,42 @@ export function useProducts() {
     products, 
     currentProduct, 
     pagination, 
+    adminProducts,
     isLoading, 
     isLoadingProduct,
     error,
     productError,
+    message,
     listProducts, 
     getProductById,
     clearCurrentProduct,
     clearErrors,
-    setLoading
+    setLoading,
+    listAdminProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct
   } = useProductStore();
 
   return {
     products,
     currentProduct,
     pagination,
+    adminProducts,
     isLoading,
     isLoadingProduct,
     error,
     productError,
+    message,
     listProducts,
     getProduct: getProductById,
     clearCurrentProduct,
     clearErrors,
-    setLoading
+    setLoading,
+    // Admin methods
+    listAdminProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct
   };
 }

@@ -130,5 +130,9 @@ export const userService = {
   ): Promise<ApiResponse<AdminActivityLogsData>> => {
     return httpClient.get<AdminActivityLogsData>('/admin/activity-logs', params);
   },
+
+  deleteUser: async (id: number): Promise<ApiResponse<never>> => {
+    return httpClient.delete<never>(`/admin/users/${id}`);
+  },
 };
 

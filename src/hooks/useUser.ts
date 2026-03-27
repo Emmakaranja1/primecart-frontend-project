@@ -9,6 +9,11 @@ export function useUser() {
     getProfile,
     updateProfile,
     updateAddress,
+    listAdminUsers,
+    activateUser,
+    deactivateUser,
+    deleteUser,
+    listAdminActivityLogs,
   } = useUserStore();
 
   return {
@@ -19,5 +24,10 @@ export function useUser() {
     getProfile,
     updateProfile,
     updateAddress,
+    listAdminUsers,
+    activateUser,
+    deactivateUser,
+    deleteUser,
+    listAdminActivityLogs,
   };
 }

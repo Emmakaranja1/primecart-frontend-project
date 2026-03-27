@@ -31,6 +31,7 @@ type UserStoreState = {
   listAdminActivityLogs: (
     params?: AdminActivityLogsQuery,
   ) => Promise<ApiResponse<AdminActivityLogsData>>;
+  deleteUser: (id: number) => Promise<ApiResponse<never>>;
 };
 
 function normalizeApiError(error: unknown): ApiError {
@@ -141,6 +142,19 @@ export const useUserStore = create<UserStoreState>((set) => ({
     try {
       const res = await userService.listAdminActivityLogs(params);
       set({ adminActivityLogs: res.data ?? null, message: res.message ?? null, isLoading: false });
+      return res;
+    } catch (e) {
+      const apiError = normalizeApiError(e);
+      set({ error: apiError, isLoading: false });
+      throw apiError;
+    }
+  },
+
+  deleteUser: async (id) => {
+    set({ isLoading: true, error: null, message: null });
+    try {
+      const res = await userService.deleteUser(id);
+      set({ message: res.message ?? null, isLoading: false });
       return res;
     } catch (e) {
       const apiError = normalizeApiError(e);
