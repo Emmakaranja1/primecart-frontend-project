@@ -5,3 +5,4 @@ export { useOrderStore } from './orderStore';
 export { useUserStore } from './userStore';
 export { useReportStore } from './reportStore';
 export { usePaymentStore } from './paymentStore';
+export { useThemeStore } from './themeStore';
