@@ -14,7 +14,7 @@ export function useOrders() {
 
   return {
     orders: publicOrders?.orders || [],
-    currentOrder: publicOrderDetails?.order || null,
+    orderDetails: publicOrderDetails || null,
     isLoading,
     error,
     getOrders,

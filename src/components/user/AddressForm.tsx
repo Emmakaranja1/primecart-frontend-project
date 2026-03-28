@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MapPin } from 'lucide-react';
-import { Button } from '../../ui/Button';
-import { cn } from '../../utils/helpers';
-import { useAuth } from '../../hooks/useAuth';
+import { Button } from '@/ui/Button';
+import { cn } from '@/utils/helpers';
 
 interface AddressFormProps {
   initialAddress?: string;
@@ -10,7 +9,6 @@ interface AddressFormProps {
   isLoading?: boolean;
   className?: string;
   autoFocus?: boolean;
-  useProfileAddress?: boolean; 
 }
 
 export default function AddressForm({ 
@@ -18,13 +16,9 @@ export default function AddressForm({
   onSubmit, 
   isLoading = false,
   className,
-  autoFocus = false,
-  useProfileAddress = false
+  autoFocus = false
 }: AddressFormProps) {
-  const { profile } = useAuth();
-  const [address, setAddress] = useState(
-    useProfileAddress && profile?.address ? profile.address : initialAddress
-  );
+  const [address, setAddress] = useState(initialAddress);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

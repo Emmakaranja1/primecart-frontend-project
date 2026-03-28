@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { useOrders } from '../../hooks/useOrders';
-import { formatCurrency, formatDate } from '../../utils/helpers';
-import { Badge } from '../../ui/Badge';
+import { useOrders } from '@/hooks/useOrders';
+import { formatCurrency, formatDate } from '@/utils/helpers';
+import { Badge } from '@/ui/Badge';
 import { Package, ChevronRight, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Button } from '../../ui/Button';
+import { Button } from '@/ui/Button';
 
 export default function OrderHistory() {
   const { orders, getOrders, isLoading } = useOrders();

@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Save } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { Input } from '@/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
 import { toast } from 'sonner';
-import { useUser } from '../../hooks/useUser';
+import type { ProfileUser, UpdateProfileRequest, ProfileResponse } from '@/api/userService';
 
-export default function ProfileForm() {
-  const { profile, updateProfile, isLoading } = useUser();
+interface ProfileFormProps {
+  profile?: ProfileUser | null;
+  onUpdate?: (data: UpdateProfileRequest) => Promise<ProfileResponse>;
+  isLoading?: boolean;
+}
+
+export default function ProfileForm({ profile, onUpdate, isLoading = false }: ProfileFormProps) {
 
   const [formData, setFormData] = useState(() => ({
     username: profile?.username || '',
@@ -28,7 +33,9 @@ export default function ProfileForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateProfile(formData);
+      if (onUpdate) {
+        await onUpdate(formData);
+      }
       toast.success('Profile updated successfully');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to update profile';
