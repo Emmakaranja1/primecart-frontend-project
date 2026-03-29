@@ -219,21 +219,27 @@ export const useProductStore = create<ProductStore>((set) => ({
     try {
       const response = await productService.updateProduct(id, payload);
       
-      if (response.success) {
-        set({
-          isLoading: false,
-          error: null,
-          message: response.message || 'Product updated successfully',
-        });
-        return response;
-      } else {
-        set({
-          isLoading: false,
-          error: normalizeApiError(response),
-          message: null,
-        });
-        return response;
-      }
+      
+      set(state => {
+        if (state.adminProducts?.products) {
+          const updatedProducts = state.adminProducts.products.map(product => 
+            product.id === id ? { ...product, ...payload } : product
+          );
+          return {
+            ...state,
+            adminProducts: {
+              ...state.adminProducts,
+              products: updatedProducts
+            },
+            isLoading: false,
+            error: null,
+            message: response.message || 'Product updated successfully',
+          };
+        }
+        return { ...state, isLoading: false, error: null, message: null };
+      });
+      
+      return response;
     } catch (error) {
       const apiError = normalizeApiError(error);
       set({
@@ -251,21 +257,29 @@ export const useProductStore = create<ProductStore>((set) => ({
     try {
       const response = await productService.deleteProduct(id);
       
-      if (response.success) {
-        set({
-          isLoading: false,
-          error: null,
-          message: response.message || 'Product deleted successfully',
-        });
-        return response;
-      } else {
-        set({
-          isLoading: false,
-          error: normalizeApiError(response),
-          message: null,
-        });
-        return response;
-      }
+      
+      set(state => {
+        if (state.adminProducts?.products) {
+          const updatedProducts = state.adminProducts.products.filter(product => product.id !== id);
+          return {
+            ...state,
+            adminProducts: {
+              ...state.adminProducts,
+              products: updatedProducts,
+              pagination: {
+                ...state.adminProducts.pagination,
+                total: state.adminProducts.pagination.total - 1
+              }
+            },
+            isLoading: false,
+            error: null,
+            message: response.message || 'Product deleted successfully',
+          };
+        }
+        return { ...state, isLoading: false, error: null, message: null };
+      });
+      
+      return response;
     } catch (error) {
       const apiError = normalizeApiError(error);
       set({

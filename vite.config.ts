@@ -9,5 +9,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://web-production-e6965.up.railway.app',
+        changeOrigin: true,
+        secure: true
+      }
+    }
   }
 })

@@ -115,7 +115,26 @@ export const useUserStore = create<UserStoreState>((set) => ({
     set({ isLoading: true, error: null, message: null });
     try {
       const res = await userService.activateUser(id);
-      set({ message: res.message ?? null, isLoading: false });
+      
+      
+      set(state => {
+        if (state.adminUsers?.users) {
+          const updatedUsers = state.adminUsers.users.map(user => 
+            user.id === id ? { ...user, status: 'active' } : user
+          );
+          return {
+            ...state,
+            adminUsers: {
+              ...state.adminUsers,
+              users: updatedUsers
+            },
+            message: res.message ?? null,
+            isLoading: false
+          };
+        }
+        return { ...state, message: res.message ?? null, isLoading: false };
+      });
+      
       return res;
     } catch (e) {
       const apiError = normalizeApiError(e);
@@ -128,7 +147,26 @@ export const useUserStore = create<UserStoreState>((set) => ({
     set({ isLoading: true, error: null, message: null });
     try {
       const res = await userService.deactivateUser(id);
-      set({ message: res.message ?? null, isLoading: false });
+      
+      
+      set(state => {
+        if (state.adminUsers?.users) {
+          const updatedUsers = state.adminUsers.users.map(user => 
+            user.id === id ? { ...user, status: 'inactive' } : user
+          );
+          return {
+            ...state,
+            adminUsers: {
+              ...state.adminUsers,
+              users: updatedUsers
+            },
+            message: res.message ?? null,
+            isLoading: false
+          };
+        }
+        return { ...state, message: res.message ?? null, isLoading: false };
+      });
+      
       return res;
     } catch (e) {
       const apiError = normalizeApiError(e);
@@ -154,7 +192,28 @@ export const useUserStore = create<UserStoreState>((set) => ({
     set({ isLoading: true, error: null, message: null });
     try {
       const res = await userService.deleteUser(id);
-      set({ message: res.message ?? null, isLoading: false });
+      
+      
+      set(state => {
+        if (state.adminUsers?.users) {
+          const updatedUsers = state.adminUsers.users.filter(user => user.id !== id);
+          return {
+            ...state,
+            adminUsers: {
+              ...state.adminUsers,
+              users: updatedUsers,
+              pagination: {
+                ...state.adminUsers.pagination,
+                total: state.adminUsers.pagination.total - 1
+              }
+            },
+            message: res.message ?? null,
+            isLoading: false
+          };
+        }
+        return { ...state, message: res.message ?? null, isLoading: false };
+      });
+      
       return res;
     } catch (e) {
       const apiError = normalizeApiError(e);

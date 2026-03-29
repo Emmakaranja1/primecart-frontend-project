@@ -222,8 +222,8 @@ export const useAuthStore = create<AuthStoreState>((set) => {
 
         set({ token: null, user: null, isAuthenticated: false, isLoading: false, message: null });
 
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+          window.location.href = '/';
         }
       }
     },

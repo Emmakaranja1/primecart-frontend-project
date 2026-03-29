@@ -19,6 +19,35 @@ const getProductRating = (productId: number): number => {
   return 3.5 + (seed % 15) / 10;
 };
 
+const getProductImage = (product: Product) => {
+  if (product.image) {
+    let imageUrl = product.image.trim();
+    
+    if (imageUrl) {
+      
+      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+        imageUrl = `https://${imageUrl}`;
+      }
+      
+      
+      try {
+        new URL(imageUrl);
+        return imageUrl;
+      } catch {
+        
+        return `https://picsum.photos/seed/${product.id}/600/800`;
+      }
+    }
+  }
+  
+  
+  return `https://picsum.photos/seed/${product.id}/600/800`;
+};
+
+const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  e.currentTarget.src = `https://picsum.photos/seed/fallback/600/800`;
+};
+
 export default function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const rating = getProductRating(product.id);
@@ -29,14 +58,11 @@ export default function ProductCard({ product }: ProductCardProps) {
     try {
       await addItem({ product_id: product.id, quantity: 1 });
       toast.success(`${product.title} added to cart`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to add to cart');
+    } catch (error) {
+      toast.error('Failed to add item to cart');
     }
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-  e.currentTarget.src = 'https://picsum.photos/seed/product/600/800';
-};
 
 return (
     <motion.div
@@ -48,7 +74,7 @@ return (
         {/* Image Container */}
         <div className="relative aspect-[4/5] overflow-hidden bg-slate-50 dark:bg-slate-800">
           <img
-            src={product.image || 'https://picsum.photos/seed/product/600/800'}
+            src={getProductImage(product)}
             alt={product.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             referrerPolicy="no-referrer"

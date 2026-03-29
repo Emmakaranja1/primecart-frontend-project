@@ -82,6 +82,19 @@ export type AdminOrderListQuery = {
   limit?: number;
 };
 
+export type UpdateOrderStatusRequest = {
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+};
+
+export type UpdateOrderStatusData = {
+  id: number;
+  transaction_reference: string;
+  status: string;
+  payment_status: string;
+  updated_at: string;
+};
+
 export type AdminOrderListItem = {
   id: number;
   transaction_reference: string;
@@ -132,5 +145,14 @@ export const orderService = {
   listAdminOrders: async (params?: AdminOrderListQuery): Promise<ApiResponse<AdminOrderListData>> => {
     return httpClient.get<AdminOrderListData>('/admin/orders', params);
   },
+
+  updateOrderStatus: async (id: number, payload: UpdateOrderStatusRequest): Promise<ApiResponse<UpdateOrderStatusData>> => {
+    return httpClient.put<UpdateOrderStatusData>(`/admin/orders/${id}/status`, payload);
+  },
+
+  deleteOrder: async (id: number): Promise<ApiResponse<never>> => {
+    return httpClient.delete<never>(`/admin/orders/${id}`);
+  },
 };
+
 

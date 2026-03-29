@@ -8,6 +8,8 @@ import type {
   OrderListQuery,
   PlaceOrderRequest,
   PlacedOrderData,
+  UpdateOrderStatusRequest,
+  UpdateOrderStatusData,
 } from '../api/orderService';
 import type { ApiError, ApiResponse } from '../api/httpClient';
 
@@ -25,6 +27,8 @@ type OrderStoreState = {
   getOrders: (params?: OrderListQuery) => Promise<ApiResponse<OrderListData>>;
   getOrderById: (id: number) => Promise<ApiResponse<OrderDetailsData>>;
   listAdminOrders: (params?: AdminOrderListQuery) => Promise<ApiResponse<AdminOrderListData>>;
+  updateOrderStatus: (id: number, payload: UpdateOrderStatusRequest) => Promise<ApiResponse<UpdateOrderStatusData>>;
+  deleteOrder: (id: number) => Promise<ApiResponse<never>>;
 };
 
 function normalizeApiError(error: unknown): ApiError {
@@ -97,6 +101,32 @@ export const useOrderStore = create<OrderStoreState>((set) => ({
     try {
       const res = await orderService.listAdminOrders(params);
       set({ adminOrders: res.data ?? null, isLoading: false });
+      return res;
+    } catch (e) {
+      const apiError = normalizeApiError(e);
+      set({ error: apiError, isLoading: false });
+      throw apiError;
+    }
+  },
+
+  updateOrderStatus: async (id, payload) => {
+    set({ isLoading: true, error: null, message: null });
+    try {
+      const res = await orderService.updateOrderStatus(id, payload);
+      set({ message: res.message ?? null, isLoading: false });
+      return res;
+    } catch (e) {
+      const apiError = normalizeApiError(e);
+      set({ error: apiError, isLoading: false });
+      throw apiError;
+    }
+  },
+
+  deleteOrder: async (id) => {
+    set({ isLoading: true, error: null, message: null });
+    try {
+      const res = await orderService.deleteOrder(id);
+      set({ message: res.message ?? null, isLoading: false });
       return res;
     } catch (e) {
       const apiError = normalizeApiError(e);

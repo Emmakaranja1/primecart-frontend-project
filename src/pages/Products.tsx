@@ -23,16 +23,22 @@ export default function Products() {
   const page = parseInt(searchParams.get('page') || '1');
 
   useEffect(() => {
-    listProducts({
+    const params: any = {
       category: category || undefined,
       brand: brand || undefined,
       min_price: minPrice,
       max_price: maxPrice,
-      featured,
       page,
       search: searchQuery,
       limit: 12
-    });
+    };
+    
+    
+    if (featured) {
+      params.featured = true;
+    }
+    
+    listProducts(params);
   }, [listProducts, category, brand, minPrice, maxPrice, featured, page, searchQuery]);
 
   const handleSearch = (e: React.FormEvent) => {

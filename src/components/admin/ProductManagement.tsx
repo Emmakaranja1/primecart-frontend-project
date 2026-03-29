@@ -1,33 +1,33 @@
 import { useState, useEffect } from 'react';
 import { 
-  Package, 
   Search, 
   Edit, 
   Trash2, 
   Plus,
   Tag,
-  Box,
   TrendingUp,
-  TrendingDown,
   Star,
   Download,
   RefreshCw,
-  Grid,
-  List
+  Package,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import { Card, CardContent } from '@/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
 import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
 import { Input } from '@/ui/Input';
 import { formatCurrency } from '@/utils/helpers';
 import { toast } from 'sonner';
-import type { Product } from '@/api/productService';
+import { CATEGORIES } from '@/utils/constants';
+import type { Product, AdminUpdateProductRequest } from '@/api/productService';
 import { useProductStore } from '@/stores/productStore';
 import ProductForm from './ProductForm';
 
 interface ProductFilters {
   search: string;
   category: string;
+  brand: string;
   status: string;
   priceRange: string;
   featured: string;
@@ -43,22 +43,28 @@ export default function ProductManagement() {
     deleteProduct,
     clearErrors
   } = useProductStore();
+  
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [deleteConfirmProductId, setDeleteConfirmProductId] = useState<number | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
   const [filters, setFilters] = useState<ProductFilters>({
     search: '',
     category: 'all',
+    brand: 'all',
     status: 'all',
     priceRange: 'all',
     featured: 'all',
   });
-  
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
 
   useEffect(() => {
-    listAdminProducts();
-  }, [listAdminProducts]);
+    if (!productsData || productsData.products.length === 0) {
+      listAdminProducts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only once on mount
 
   useEffect(() => {
     if (error) {
@@ -67,11 +73,14 @@ export default function ProductManagement() {
     }
   }, [error, clearErrors]);
 
+  const uniqueCategories = CATEGORIES.map(cat => cat.value);
+
   const filteredProducts = (productsData?.products || []).filter((product: Product) => {
     const matchesSearch = product.title.toLowerCase().includes(filters.search.toLowerCase()) ||
                          product.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
                          product.brand?.toLowerCase().includes(filters.search.toLowerCase());
     const matchesCategory = filters.category === 'all' || product.category === filters.category;
+    const matchesBrand = filters.brand === 'all' || product.brand === filters.brand;
     const matchesStatus = filters.status === 'all' || 
                          (filters.status === 'active' && product.is_active) ||
                          (filters.status === 'inactive' && !product.is_active);
@@ -79,7 +88,7 @@ export default function ProductManagement() {
                           (filters.featured === 'featured' && product.featured) ||
                           (filters.featured === 'regular' && !product.featured);
     
-    return matchesSearch && matchesCategory && matchesStatus && matchesFeatured;
+    return matchesSearch && matchesCategory && matchesBrand && matchesStatus && matchesFeatured;
   });
 
   const handleSelectProduct = (productId: number) => {
@@ -94,164 +103,132 @@ export default function ProductManagement() {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([]);
     } else {
-      setSelectedProducts(filteredProducts.map((product: Product) => product.id));
+      setSelectedProducts(filteredProducts.map(product => product.id));
     }
   };
 
   const handleDeleteProduct = async (productId: number) => {
-    const success = await deleteProduct(productId);
-    if (success) {
+    try {
+      await deleteProduct(productId);
       setSelectedProducts(prev => prev.filter(id => id !== productId));
+      setDeleteConfirmProductId(null);
       toast.success('Product deleted successfully');
-    } else {
-      toast.error('Failed to delete product');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete product: ${errorMessage}`);
     }
   };
 
-  const handleToggleProductStatus = async (productId: number, currentStatus: boolean) => {
-    const product = productsData?.products.find((p: Product) => p.id === productId);
-    if (!product) return;
-    
+  const handleToggleStatus = async (productId: number, currentStatus: boolean) => {
     try {
-      await updateProduct(productId, { 
-        title: product.title,
-        description: product.description || null,
-        price: Number(product.price),
-        quantity: Number(product.quantity),
-        category: product.category || null,
-        brand: product.brand || null,
-        image: product.image || null,
-        is_active: !currentStatus,
-        featured: product.featured || false,
-      });
+      await updateProduct(productId, { is_active: !currentStatus } as AdminUpdateProductRequest);
       toast.success(`Product ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to update product status');
     }
   };
 
   const handleToggleFeatured = async (productId: number, currentFeatured: boolean) => {
-    const product = productsData?.products.find((p: Product) => p.id === productId);
-    if (!product) return;
-    
     try {
-      await updateProduct(productId, { 
-        title: product.title,
-        description: product.description || null,
-        price: Number(product.price),
-        quantity: Number(product.quantity),
-        category: product.category || null,
-        brand: product.brand || null,
-        image: product.image || null,
-        is_active: product.is_active || false,
-        featured: !currentFeatured,
-      });
+      await updateProduct(productId, { featured: !currentFeatured } as AdminUpdateProductRequest);
       toast.success(`Product ${!currentFeatured ? 'featured' : 'unfeatured'} successfully`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to update product featured status');
     }
   };
 
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await listAdminProducts();
+      setLastRefreshed(new Date());
+      toast.success('Products refreshed');
+    } catch {
+      toast.error('Failed to refresh products');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleExportProducts = () => {
+    const productsToExport = filteredProducts.map(product => ({
+      ID: product.id,
+      Title: product.title,
+      Description: product.description || '',
+      Price: product.price,
+      Category: product.category || '',
+      Brand: product.brand || '',
+      Quantity: product.quantity || 0,
+      Status: product.is_active ? 'Active' : 'Inactive',
+      Featured: product.featured ? 'Yes' : 'No',
+      'Created At': product.created_at || '',
+    }));
+
+    const csv = convertToCSV(productsToExport);
+    downloadCSV(csv, 'products-export.csv');
     toast.success('Products exported successfully');
   };
 
+  const convertToCSV = (data: Record<string, unknown>[]) => {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvHeaders = headers.join(',');
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header];
+        return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+      }).join(',')
+    );
+
+    return [csvHeaders, ...csvRows].join('\n');
+  };
+
+  const downloadCSV = (csv: string, filename: string) => {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getStatusBadge = (isActive: boolean) => {
-    return isActive ? 'success' : 'destructive';
+    return isActive ? 'success' : 'warning';
   };
 
-  const getStockBadge = (quantity: number) => {
-    if (quantity > 50) return 'success';
-    if (quantity > 10) return 'warning';
-    return 'destructive';
+  const getFeaturedBadge = (featured: boolean) => {
+    return featured ? 'default' : 'secondary';
   };
 
-  const ProductCard = ({ product }: { product: Product }) => (
-    <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/60 dark:hover:shadow-slate-950/50 hover:-translate-y-1">
-      <div className="relative">
-        <img
-          src={product.image || 'https://picsum.photos/seed/product/400/400'}
-          alt={product.title}
-          className="w-full h-48 object-cover"
-          onError={(e) => {
-            e.currentTarget.src = 'https://picsum.photos/seed/product/400/400';
-          }}
-        />
-        {product.featured && (
-          <div className="absolute top-2 left-2">
-            <Badge variant="default" className="bg-yellow-500 text-white border-none">
-              <Star className="w-3 h-3 mr-1" />
-              Featured
-            </Badge>
-          </div>
-        )}
-        <div className="absolute top-2 right-2">
-          <Badge variant={getStatusBadge(product.is_active!)}>
-            {product.is_active ? 'Active' : 'Inactive'}
-          </Badge>
-        </div>
-      </div>
+  const getProductImage = (product: Product) => {
+    if (product.image) {
+      let imageUrl = product.image.trim();
       
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
-              {product.title}
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-              {product.description}
-            </p>
-          </div>
+      
+      if (imageUrl) {
+        
+        if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+          imageUrl = `https://${imageUrl}`;
+        }
+        
+        
+        try {
+          new URL(imageUrl);
+          return imageUrl;
+        } catch {
           
-          <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-              {formatCurrency(Number(product.price))}
-            </span>
-            <Badge variant={getStockBadge(Number(product.quantity))}>
-              Stock: {product.quantity}
-            </Badge>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-            <span>{product.category}</span>
-            <span>{product.brand}</span>
-          </div>
-          
-          <div className="flex items-center space-x-2 pt-2">
-            <Button 
-            variant="ghost"
-            size="sm"
-            className="rounded-lg"
-            onClick={() => setEditingProduct(product)}
-          >
-            <Edit className="w-4 h-4 mr-1" />
-            Edit
-          </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-lg"
-              onClick={() => handleToggleProductStatus(product.id, product.is_active!)}
-            >
-              {product.is_active ? (
-                <TrendingDown className="w-4 h-4" />
-              ) : (
-                <TrendingUp className="w-4 h-4" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-lg text-red-600 hover:text-red-700"
-              onClick={() => handleDeleteProduct(product.id)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+          return `https://picsum.photos/seed/${product.id}/200/200.jpg`;
+        }
+      }
+    }
+    
+    
+    return `https://picsum.photos/seed/${product.id}/200/200.jpg`;
+  };
 
   if (isLoading) {
     return (
@@ -263,10 +240,31 @@ export default function ProductManagement() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-80 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          ))}
+        <Card className="rounded-2xl">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Product Management</h1>
+            <p className="text-red-600 dark:text-red-400 mt-1">Error: {error.message}</p>
+          </div>
+          <Button onClick={() => listAdminProducts()} className="rounded-xl">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -284,36 +282,44 @@ export default function ProductManagement() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <div className="flex items-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-1">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              className="rounded-lg"
-            >
-              <Grid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="rounded-lg"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          <Button variant="outline" size="sm" className="rounded-xl" onClick={handleExportProducts}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button size="sm" className="rounded-xl" onClick={() => {
-            setEditingProduct(undefined);
-            setShowProductModal(true);
-          }}>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="rounded-xl bg-purple-600 dark:bg-purple-700 text-white border-purple-700 dark:border-purple-800 hover:bg-purple-700 dark:hover:bg-purple-800 shadow-lg shadow-purple-200/50 dark:shadow-none transition-all duration-200"
+            onClick={() => {
+              setEditingProduct(undefined);
+              setShowProductForm(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Product
           </Button>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="rounded-xl bg-blue-600 dark:bg-blue-700 text-white border-blue-700 dark:border-blue-800 hover:bg-blue-700 dark:hover:bg-blue-800 shadow-lg shadow-blue-200/50 dark:shadow-none transition-all duration-200"
+            onClick={handleExportProducts}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="rounded-xl bg-emerald-600 dark:bg-emerald-700 text-white border-emerald-700 dark:border-emerald-800 hover:bg-emerald-700 dark:hover:bg-emerald-800 shadow-lg shadow-emerald-200/50 dark:shadow-none transition-all duration-200"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="Refresh products list"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          
+          {lastRefreshed && (
+            <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
+              Updated: {lastRefreshed.toLocaleTimeString()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -341,11 +347,11 @@ export default function ProductManagement() {
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Products</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                  {productsData?.products?.filter((p: Product) => p.is_active).length || 0}
+                  {productsData?.products?.filter(p => p.is_active).length || 0}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 flex items-center justify-center">
-                <Box className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>
@@ -355,13 +361,13 @@ export default function ProductManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Featured</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Featured Products</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                  {productsData?.products?.filter((p: Product) => p.featured).length || 0}
+                  {productsData?.products?.filter(p => p.featured).length || 0}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-100 to-amber-100 dark:from-yellow-900/20 dark:to-amber-900/20 flex items-center justify-center">
-                <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/20 dark:to-yellow-900/20 flex items-center justify-center">
+                <Star className="w-6 h-6 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardContent>
@@ -371,13 +377,13 @@ export default function ProductManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Low Stock</p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Categories</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                  {productsData?.products?.filter((p: Product) => Number(p.quantity) <= 10).length || 0}
+                  {uniqueCategories.length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/20 dark:to-pink-900/20 flex items-center justify-center">
-                <TrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center">
+                <Tag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -407,10 +413,22 @@ export default function ProductManagement() {
                 className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none focus:bg-white dark:focus:bg-slate-700 text-slate-900 dark:text-white font-medium"
               >
                 <option value="all">All Categories</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Accessories">Accessories</option>
-                <option value="Clothing">Clothing</option>
-                <option value="Home">Home</option>
+                {uniqueCategories.map((category: string) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              
+              <select
+                value={filters.brand}
+                onChange={(e) => setFilters(prev => ({ ...prev, brand: e.target.value }))}
+                className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none focus:bg-white dark:focus:bg-slate-700 text-slate-900 dark:text-white font-medium"
+              >
+                <option value="all">All Brands</option>
+                {Array.from(new Set(productsData?.products?.map(p => p.brand).filter((brand): brand is string => brand !== null) || []))
+                .sort()
+                .map((brand: string, index: number) => (
+                  <option key={`${brand}-${index}`} value={brand}>{brand}</option>
+                ))}
               </select>
               
               <select
@@ -441,178 +459,235 @@ export default function ProductManagement() {
         </CardContent>
       </Card>
 
-      {/* Products Display */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-          Products ({filteredProducts.length})
-        </h2>
-        
-        {selectedProducts.length > 0 && (
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-slate-600 dark:text-slate-400">
-              {selectedProducts.length} selected
-            </span>
-            <Button variant="outline" size="sm" className="rounded-xl">
-              <Tag className="w-4 h-4 mr-2" />
-              Bulk Edit
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product: Product) => (
-            <div key={product.id} className="relative">
-              <input
-                type="checkbox"
-                checked={selectedProducts.includes(product.id)}
-                onChange={() => handleSelectProduct(product.id)}
-                className="absolute top-4 left-4 z-10 rounded-lg border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
-              />
-              <ProductCard product={product} />
+      {/* Products Table */}
+      <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
+            Products ({filteredProducts.length})
+          </CardTitle>
+          
+          {selectedProducts.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                {selectedProducts.length} selected
+              </span>
+              <Button variant="outline" size="sm" className="rounded-xl">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Bulk Delete
+              </Button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
-          <CardContent className="p-6">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800">
-                    <th className="text-left py-4 px-4">
+          )}
+        </CardHeader>
+        
+        <CardContent className="p-6 pt-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800">
+                  <th className="text-left py-4 px-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.length === filteredProducts.length}
+                      onChange={handleSelectAll}
+                      className="rounded-lg border-slate-300 dark:border-slate-600"
+                    />
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Product
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Category
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Brand
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Price
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Stock
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Status
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Featured
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr
+                    key={product.id}
+                    className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <td className="py-4 px-4">
                       <input
                         type="checkbox"
-                        checked={selectedProducts.length === filteredProducts.length}
-                        onChange={handleSelectAll}
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => handleSelectProduct(product.id)}
                         className="rounded-lg border-slate-300 dark:border-slate-600"
                       />
-                    </th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Product
-                    </th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Category
-                    </th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Price
-                    </th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Stock
-                    </th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Status
-                    </th>
-                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product: Product) => (
-                    <tr
-                      key={product.id}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <td className="py-4 px-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.includes(product.id)}
-                          onChange={() => handleSelectProduct(product.id)}
-                          className="rounded-lg border-slate-300 dark:border-slate-600"
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={getProductImage(product)}
+                          alt={product.title}
+                          className="w-12 h-12 rounded-lg object-cover"
                         />
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center space-x-3">
-                          <img
-                            src={product.image || 'https://picsum.photos/seed/product/60/60'}
-                            alt={product.title}
-                            className="w-12 h-12 rounded-lg object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://picsum.photos/seed/product/60/60';
-                            }}
-                          />
-                          <div>
-                            <p className="font-semibold text-slate-900 dark:text-white">
-                              {product.title}
-                            </p>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                              {product.brand}
-                            </p>
+                        <div>
+                          <p className="font-semibold text-slate-900 dark:text-white">
+                            {product.title}
+                          </p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
+                            {product.description}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge variant="outline" className="text-xs">
+                        {product.category || 'Uncategorized'}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge variant="secondary" className="text-xs">
+                        {product.brand || 'No Brand'}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {formatCurrency(product.price)}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`text-sm font-medium ${
+                        (product.quantity as number) > 10 ? 'text-emerald-600 dark:text-emerald-400' :
+                        (product.quantity as number) > 0 ? 'text-amber-600 dark:text-amber-400' :
+                        'text-red-600 dark:text-red-400'
+                      }`}>
+                        {product.quantity || 0} units
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge variant={getStatusBadge(product.is_active || false)} className="text-xs">
+                        {product.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge variant={getFeaturedBadge(product.featured || false)} className="text-xs">
+                        {product.featured ? 'Featured' : 'Regular'}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4">
+                      {deleteConfirmProductId === product.id ? (
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 border border-red-200 dark:border-red-800 text-sm space-y-2">
+                          <p className="font-medium text-red-900 dark:text-red-100">Delete product?</p>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg text-xs"
+                              onClick={() => setDeleteConfirmProductId(null)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="rounded-lg text-xs"
+                              onClick={() => handleDeleteProduct(product.id)}
+                            >
+                              Delete
+                            </Button>
                           </div>
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge variant="outline">
-                          {product.category}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {formatCurrency(Number(product.price))}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge variant={getStockBadge(Number(product.quantity))}>
-                          {product.quantity}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={getStatusBadge(product.is_active!)}>
-                            {product.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                          {product.featured && (
-                            <Badge variant="default" className="bg-yellow-500 text-white">
-                              <Star className="w-3 h-3 mr-1" />
-                              Featured
-                            </Badge>
-                          )}
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all duration-200 shadow-sm"
+                            onClick={() => handleToggleStatus(product.id, product.is_active || false)}
+                            title={product.is_active ? 'Deactivate product' : 'Activate product'}
+                          >
+                            {product.is_active ? (
+                              <>
+                                <EyeOff className="w-3 h-3 mr-1" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-3 h-3 mr-1" />
+                                Activate
+                              </>
+                            )}
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all duration-200 shadow-sm"
+                            onClick={() => handleToggleFeatured(product.id, product.featured || false)}
+                            title={product.featured ? 'Remove from featured' : 'Add to featured'}
+                          >
+                            {product.featured ? (
+                              <>
+                                <Star className="w-3 h-3 mr-1" />
+                                Unfeature
+                              </>
+                            ) : (
+                              <>
+                                <Star className="w-3 h-3 mr-1" />
+                                Feature
+                              </>
+                            )}
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 shadow-sm"
+                            onClick={() => {
+                              setEditingProduct(product);
+                              setShowProductForm(true);
+                            }}
+                            title="Edit product"
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-200 shadow-sm"
+                            onClick={() => setDeleteConfirmProductId(product.id)}
+                            title="Delete product permanently"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete
+                          </Button>
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg"
-                            onClick={() => setEditingProduct(product)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg"
-                            onClick={() => handleToggleFeatured(product.id, product.featured!)}
-                          >
-                            <Star className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg text-red-600 hover:text-red-700"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           </CardContent>
-        </Card>
-      )}
+      </Card>
       
-      {/* ProductForm Modal */}
-      {showProductModal && (
-        <ProductForm
+      {/* Product Form Modal */}
+      {showProductForm && (
+        <ProductForm 
           onClose={() => {
-            setShowProductModal(false);
+            setShowProductForm(false);
             setEditingProduct(undefined);
           }}
           initialData={editingProduct}

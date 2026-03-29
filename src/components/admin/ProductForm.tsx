@@ -6,6 +6,7 @@ import { Input } from '@/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
 import { useProductStore } from '../../stores/productStore';
 import { toast } from 'sonner';
+import { CATEGORIES, BRANDS } from '../../constants/categories';
 import type { Product } from '../../api/productService';
 import type { AdminCreateProductRequest, AdminUpdateProductRequest } from '../../api/productService';
 
@@ -242,13 +243,19 @@ export default function ProductForm({ onClose, initialData }: ProductFormProps) 
                   </label>
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Category</label>
-                    <Input
+                    <select
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
-                      placeholder="e.g. Electronics"
-                      className="rounded-2xl h-12 bg-slate-50 dark:bg-slate-800 border-none dark:text-white"
-                    />
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none dark:text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                    >
+                      <option value="">Select a category</option>
+                      {CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -257,13 +264,19 @@ export default function ProductForm({ onClose, initialData }: ProductFormProps) 
                   </label>
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Brand</label>
-                    <Input
+                    <select
                       name="brand"
                       value={formData.brand}
                       onChange={handleChange}
-                      placeholder="e.g. Sony"
-                      className="rounded-2xl h-12 bg-slate-50 dark:bg-slate-800 border-none dark:text-white"
-                    />
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none dark:text-white text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                    >
+                      <option value="">Select a brand</option>
+                      {BRANDS.map((brand) => (
+                        <option key={brand} value={brand}>
+                          {brand}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

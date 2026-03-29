@@ -4,6 +4,7 @@ import { useUserStore } from '../../stores/userStore';
 import { useOrderStore } from '../../stores/orderStore';
 import { useProductStore } from '../../stores/productStore';
 import { useReportStore } from '../../stores/reportStore';
+import { useAuthStore } from '../../stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
@@ -16,10 +17,10 @@ import {
   ArrowUpRight, 
   ArrowDownRight,
   Plus,
-  X,
   Calendar,
   DollarSign,
-  BarChart3
+  BarChart3,
+  LogOut
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import ProductForm from '../../components/admin/ProductForm';
@@ -29,7 +30,7 @@ import ProductManagement from '../../components/admin/ProductManagement';
 import ActivityLog from '../../components/admin/ActivityLog';
 import ReportsView from '../../components/admin/ReportsView';
 
-type TabType = 'overview' | 'orders' | 'users' | 'products' | 'logs';
+type TabType = 'overview' | 'orders' | 'users' | 'products' | 'logs' | 'reports';
 
 interface StatCard {
   label: string;
@@ -48,7 +49,6 @@ interface TabItem {
 
 export default function AdminDashboard() {
   const { 
-    adminUsers, 
     isLoading: userLoading,
     adminActivityLogs,
     listAdminUsers,
@@ -74,16 +74,12 @@ export default function AdminDashboard() {
     getUsersReport, 
     getOrdersReport 
   } = useReportStore();
+
+  const { logout, isLoading: logoutLoading } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [showReports, setShowReports] = useState(false);
-
-  const orders = adminOrders?.orders || [];
-  const products = adminProducts?.products || [];
-  const users = adminUsers?.users || [];
-  const activityLogs = adminActivityLogs?.logs || [];
 
   useEffect(() => {
     const loadData = async () => {
@@ -109,6 +105,14 @@ export default function AdminDashboard() {
     setShowProductForm(true);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   const isLoading = userLoading || orderLoading || productLoading || reportsLoading;
 
   if (isLoading && activeTab === 'overview') {
@@ -125,7 +129,7 @@ export default function AdminDashboard() {
   const stats: StatCard[] = [
     { 
       label: 'Total Revenue', 
-      value: formatCurrency(ordersReport?.orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0), 
+      value: formatCurrency(ordersReport?.orders?.reduce((sum, order) => sum + (typeof order.total_amount === 'string' ? parseFloat(order.total_amount) : order.total_amount), 0) || 0), 
       change: '+12.5%', 
       icon: DollarSign, 
       color: 'text-green-600', 
@@ -133,7 +137,7 @@ export default function AdminDashboard() {
     },
     { 
       label: 'Total Orders', 
-      value: ordersReport?.pagination?.total || orders.length, 
+      value: ordersReport?.pagination?.total || 0, 
       change: '+8.2%', 
       icon: ShoppingBag, 
       color: 'text-blue-600', 
@@ -141,7 +145,7 @@ export default function AdminDashboard() {
     },
     { 
       label: 'Total Users', 
-      value: usersReport?.pagination?.total || users.length, 
+      value: usersReport?.pagination?.total || 0, 
       change: '+15.4%', 
       icon: Users, 
       color: 'text-purple-600', 
@@ -149,7 +153,7 @@ export default function AdminDashboard() {
     },
     { 
       label: 'Active Products', 
-      value: products.length, 
+      value: adminProducts?.products?.length || 0, 
       change: '+2.1%', 
       icon: Package, 
       color: 'text-orange-600', 
@@ -163,97 +167,121 @@ export default function AdminDashboard() {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'logs', label: 'Activity Logs', icon: Activity },
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-20 transition-colors duration-300">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Admin Dashboard</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Welcome back, Administrator. Here's what's happening today.</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Button 
-              variant="outline" 
-              className="rounded-xl h-12 px-5 font-bold dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
-              onClick={() => setShowReports(true)}
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Reports
-            </Button>
-            <Button variant="outline" className="rounded-xl h-12 px-5 font-bold dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900">
-              <Calendar className="w-4 h-4 mr-2" />
-              Last 30 Days
-            </Button>
-            <Button 
-              onClick={openAddProduct}
-              className="rounded-xl h-12 px-6 font-black shadow-lg shadow-primary/20"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Product
-            </Button>
-          </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 flex">
+      {/* Sidebar Navigation */}
+      <div className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed left-0 top-0 h-screen overflow-y-auto flex flex-col">
+        {/* Logo/Branding */}
+        <div className="px-6 py-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">PRIMECART DASHBOARD</h2>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          {stats.map((stat, idx) => (
-            <Card key={idx} className="border-none shadow-sm dark:bg-slate-900 rounded-3xl overflow-hidden group hover:shadow-md transition-all">
-              <CardContent className="p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-14 h-14 rounded-2xl ${stat.bg} dark:bg-slate-800 flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform`}>
-                    <stat.icon className="w-7 h-7" />
-                  </div>
-                  <div className={`flex items-center text-sm font-black ${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                    {stat.change}
-                    {stat.change.startsWith('+') ? <ArrowUpRight className="w-4 h-4 ml-1" /> : <ArrowDownRight className="w-4 h-4 ml-1" />}
-                  </div>
-                </div>
+        <div className="p-4 flex-1">
+          <Card className="border-none shadow-sm dark:bg-slate-800 rounded-[2rem] p-4 h-full flex flex-col">
+            <nav className="space-y-2 flex-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
+                    activeTab === tab.id 
+                      ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <tab.icon className="w-5 h-5" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            {/* Logout Button */}
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <button
+                onClick={handleLogout}
+                disabled={logoutLoading}
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>{logoutLoading ? 'Logging out...' : 'Logout'}</span>
+              </button>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="ml-64 w-[calc(100%-256px)] pb-20">
+        <div className="px-6 sm:px-8 lg:px-10">
+          {/* Header - Only show on overview */}
+          {activeTab === 'overview' && (
+            <>
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 pt-8">
                 <div className="space-y-1">
-                  <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-widest">{stat.label}</p>
-                  <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stat.value}</h3>
+                  <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Admin Dashboard</h1>
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">Welcome back, Administrator. Here's what's happening today.</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Main Content Area */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          {/* Sidebar Navigation */}
-          <div className="xl:col-span-2">
-            <Card className="border-none shadow-sm dark:bg-slate-900 rounded-[2rem] p-4 sticky top-32">
-              <nav className="space-y-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${
-                      activeTab === tab.id 
-                        ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                <div className="flex items-center space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl h-12 px-5 font-bold dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                    onClick={() => setActiveTab('reports')}
                   >
-                    <tab.icon className="w-5 h-5" />
-                    <span>{tab.label}</span>
-                  </button>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Reports
+                  </Button>
+                  <Button variant="outline" className="rounded-xl h-12 px-5 font-bold dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Last 30 Days
+                  </Button>
+                  <Button 
+                    onClick={openAddProduct}
+                    className="rounded-xl h-12 px-6 font-black shadow-lg shadow-primary/20"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stats Grid - Only show on overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                {stats.map((stat, idx) => (
+                  <Card key={idx} className="border-none shadow-sm dark:bg-slate-900 rounded-3xl overflow-hidden group hover:shadow-md transition-all">
+                    <CardContent className="p-8">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`w-14 h-14 rounded-2xl ${stat.bg} dark:bg-slate-800 flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform`}>
+                          <stat.icon className="w-7 h-7" />
+                        </div>
+                        <div className={`flex items-center text-sm font-black ${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
+                          {stat.change}
+                          {stat.change.startsWith('+') ? <ArrowUpRight className="w-4 h-4 ml-1" /> : <ArrowDownRight className="w-4 h-4 ml-1" />}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-widest">{stat.label}</p>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stat.value}</h3>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-              </nav>
-            </Card>
-          </div>
+              </div>
+            </>
+          )}
 
           {/* Content View */}
-          <div className="xl:col-span-10">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className={activeTab !== 'overview' ? 'pt-8' : ''}
+            >
                 {activeTab === 'overview' && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Recent Orders */}
@@ -269,25 +297,31 @@ export default function AdminDashboard() {
                       </CardHeader>
                       <CardContent className="p-8 pt-0">
                         <div className="space-y-4">
-                          {orders.slice(0, 5).map((order: any) => (
-                            <div key={order.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:border-primary/20 transition-all group">
-                              <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary dark:text-white shadow-sm font-black text-[10px]">
-                                  #{order.transaction_reference?.slice(-4) || order.id}
+                          {adminOrders?.orders && adminOrders.orders.length > 0 ? (
+                            adminOrders.orders.slice(0, 5).map((order: any) => (
+                              <div key={order.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:border-primary/20 transition-all group">
+                                <div className="flex items-center space-x-4">
+                                  <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary dark:text-white shadow-sm font-black text-[10px]">
+                                    #{order.transaction_reference?.slice(-4) || order.id}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-slate-900 dark:text-white">Order #{order.id}</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{formatDate(order.created_at)}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <h4 className="font-bold text-slate-900 dark:text-white">Order #{order.id}</h4>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{formatDate(order.created_at)}</p>
+                                <div className="text-right">
+                                  <p className="font-black text-slate-900 dark:text-white">{formatCurrency(order.total_amount)}</p>
+                                  <Badge variant={order.status === 'completed' || order.status === 'delivered' ? 'success' : order.status === 'pending' ? 'warning' : 'default'} className="mt-1">
+                                    {order.status}
+                                  </Badge>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-black text-slate-900 dark:text-white">{formatCurrency(order.total_amount)}</p>
-                                <Badge variant={order.status === 'completed' ? 'success' : 'warning'} className="mt-1">
-                                  {order.status}
-                                </Badge>
-                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8">
+                              <p className="text-slate-500 dark:text-slate-400">No orders yet</p>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -305,22 +339,28 @@ export default function AdminDashboard() {
                       </CardHeader>
                       <CardContent className="p-8 pt-0">
                         <div className="space-y-6">
-                          {activityLogs.slice(0, 6).map((log: any) => (
-                            <div key={log.id} className="flex items-start space-x-4 relative">
-                              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 flex-shrink-0">
-                                <Activity className="w-5 h-5" />
-                              </div>
-                              <div className="flex-1 space-y-1">
-                                <p className="text-sm font-bold text-slate-900 dark:text-slate-200">
-                                  <span className="text-primary dark:text-blue-400">{log.user?.username || `User ${log.user_id}`}</span> {log.action}
-                                </p>
-                                <div className="flex items-center text-xs text-slate-400 dark:text-slate-500 font-medium">
-                                  <Calendar className="w-3 h-3 mr-1" />
-                                  {formatDate(log.created_at)}
+                          {adminActivityLogs?.logs && adminActivityLogs.logs.length > 0 ? (
+                            adminActivityLogs.logs.slice(0, 6).map((log: any) => (
+                              <div key={log.id} className="flex items-start space-x-4 relative">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 flex-shrink-0">
+                                  <Activity className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                  <p className="text-sm font-bold text-slate-900 dark:text-slate-200">
+                                    <span className="text-primary dark:text-blue-400">{log.user?.username || `User ${log.user_id}`}</span> {log.action}
+                                  </p>
+                                  <div className="flex items-center text-xs text-slate-400 dark:text-slate-500 font-medium">
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    {formatDate(log.created_at)}
+                                  </div>
                                 </div>
                               </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8">
+                              <p className="text-slate-500 dark:text-slate-400">No activity logs yet</p>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -334,11 +374,12 @@ export default function AdminDashboard() {
                 {activeTab === 'products' && <ProductManagement />}
 
                 {activeTab === 'logs' && <ActivityLog />}
+
+                {activeTab === 'reports' && <ReportsView />}
               </motion.div>
             </AnimatePresence>
           </div>
         </div>
-      </div>
 
       <AnimatePresence>
         {showProductForm && (
@@ -346,25 +387,6 @@ export default function AdminDashboard() {
             onClose={() => setShowProductForm(false)} 
             initialData={editingProduct}
           />
-        )}
-        {showReports && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-6xl max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Reports</h2>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowReports(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-                <ReportsView />
-              </div>
-            </div>
-          </div>
         )}
       </AnimatePresence>
     </div>

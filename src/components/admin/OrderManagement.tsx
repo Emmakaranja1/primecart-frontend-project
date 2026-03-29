@@ -14,7 +14,8 @@ import {
   MapPin,
   CreditCard,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
 import { Badge } from '@/ui/Badge';
@@ -73,11 +74,27 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus }: { 
+const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus, onDeleteOrder }: { 
   order: AdminOrderListItem & { order_number: string; customer_name: string; customer_email: string }; 
   onClose: () => void; 
-  onUpdateOrderStatus: (orderId: number, newStatus: string) => Promise<void> 
-}) => (
+  onUpdateOrderStatus: (orderId: number, payload: { status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }) => Promise<void>;
+  onDeleteOrder: (orderId: number) => Promise<void>;
+}) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDeleteOrder(order.id);
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (error) {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
       <div className="p-6 border-b border-slate-200 dark:border-slate-800">
@@ -176,53 +193,125 @@ const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus }: {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-          <Button
-            variant="outline"
-            className="rounded-xl"
-            onClick={onClose}
-          >
-            Close
-          </Button>
-          {order.status === 'pending' && (
-            <Button
-              className="rounded-xl"
-              onClick={() => {
-                onUpdateOrderStatus(order.id, 'processing');
-              }}
-            >
-              Start Processing
-            </Button>
-          )}
-          {order.status === 'processing' && (
-            <Button
-              className="rounded-xl"
-              onClick={() => {
-                onUpdateOrderStatus(order.id, 'shipped');
-              }}
-            >
-              Mark as Shipped
-            </Button>
-          )}
-          {order.status === 'shipped' && (
-            <Button
-              className="rounded-xl"
-              onClick={() => {
-                onUpdateOrderStatus(order.id, 'delivered');
-              }}
-            >
-              Mark as Delivered
-            </Button>
-          )}
-        </div>
+        {/* Order Actions */}
+        {showDeleteConfirm ? (
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+            <h4 className="font-semibold text-red-900 dark:text-red-100 mb-3">Confirm Delete Order</h4>
+            <p className="text-sm text-red-800 dark:text-red-200 mb-4">
+              Are you sure you want to delete this order? This action cannot be undone.
+            </p>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-xl"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Order'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Status Update Actions */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-slate-900 dark:text-white">Update Order Status</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={order.status === 'pending' ? 'default' : 'outline'}
+                  className={`rounded-xl ${order.status === 'pending' ? 'bg-amber-600 dark:bg-amber-700 text-white border-amber-700 dark:border-amber-800 hover:bg-amber-700 dark:hover:bg-amber-800' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30'}`}
+                  onClick={() => onUpdateOrderStatus(order.id, { status: 'pending' })}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Pending
+                </Button>
+                
+                <Button
+                  variant={order.status === 'processing' ? 'default' : 'outline'}
+                  className={`rounded-xl ${order.status === 'processing' ? '' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`}
+                  onClick={() => onUpdateOrderStatus(order.id, { status: 'processing' })}
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Processing
+                </Button>
+                
+                <Button
+                  variant={order.status === 'shipped' ? 'default' : 'outline'}
+                  className={`rounded-xl ${order.status === 'shipped' ? '' : 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 dark:hover:bg-cyan-900/30'}`}
+                  onClick={() => onUpdateOrderStatus(order.id, { status: 'shipped' })}
+                >
+                  <Truck className="w-4 h-4 mr-2" />
+                  Shipped
+                </Button>
+                
+                <Button
+                  variant={order.status === 'delivered' ? 'default' : 'outline'}
+                  className={`rounded-xl ${order.status === 'delivered' ? '' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}
+                  onClick={() => onUpdateOrderStatus(order.id, { status: 'delivered' })}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Delivered
+                </Button>
+                
+                <Button
+                  variant={order.status === 'cancelled' ? 'destructive' : 'outline'}
+                  className={`rounded-xl ${order.status === 'cancelled' ? '' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30'}`}
+                  onClick={() => onUpdateOrderStatus(order.id, { status: 'cancelled' })}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancelled
+                </Button>
+                
+                {(order.status === 'pending' || order.status === 'cancelled') && (
+                  <Button
+                    variant="outline"
+                    className="rounded-xl text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Order
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex items-center space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                variant="outline"
+                className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                onClick={onClose}
+              >
+                Close
+              </Button>
+              <Button
+                variant="default"
+                className="rounded-xl bg-green-600 dark:bg-green-700 text-white border-green-700 dark:border-green-800 hover:bg-green-700 dark:hover:bg-green-800"
+                onClick={onClose}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   </div>
 );
+};
 
 export default function OrderManagement() {
-  const { adminOrders, isLoading, listAdminOrders } = useOrderStore();
+  const { adminOrders, isLoading, listAdminOrders, updateOrderStatus, deleteOrder } = useOrderStore();
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [filters, setFilters] = useState<OrderFilters>({
     search: '',
@@ -231,10 +320,34 @@ export default function OrderManagement() {
     date_range: 'all',
   });
   const [viewingOrder, setViewingOrder] = useState<(AdminOrderListItem & { order_number: string; customer_name: string; customer_email: string }) | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
+  // Auto-refresh orders every 30 seconds
   useEffect(() => {
     listAdminOrders();
+    setLastRefreshed(new Date());
+
+    const interval = setInterval(() => {
+      listAdminOrders();
+      setLastRefreshed(new Date());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, [listAdminOrders]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await listAdminOrders();
+      setLastRefreshed(new Date());
+      toast.success('Orders refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh orders');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const orders = adminOrders?.orders || [];
   const transformedOrders = orders.map(transformOrderData);
@@ -266,17 +379,27 @@ export default function OrderManagement() {
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
+  const handleUpdateOrderStatus = async (orderId: number, payload: { status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }) => {
     try {
-      
-    
-      toast.success(`Order ${orderId} status updated to ${newStatus}`);
-      
-    
+      await updateOrderStatus(orderId, payload);
+      toast.success(`Order status updated to ${payload.status}`);
+      setViewingOrder(null);
       await listAdminOrders();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error(`Failed to update order status: ${errorMessage}`);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: number) => {
+    try {
+      await deleteOrder(orderId);
+      toast.success('Order deleted successfully');
+      setViewingOrder(null);
+      await listAdminOrders();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete order: ${errorMessage}`);
     }
   };
 
@@ -439,9 +562,22 @@ export default function OrderManagement() {
                 <option value="refunded">Refunded</option>
               </select>
               
-              <Button variant="outline" size="icon" className="rounded-xl">
-                <RefreshCw className="w-5 h-5" />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="rounded-xl"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                title="Refresh orders (auto-refreshes every 30 seconds)"
+              >
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
+              
+              {lastRefreshed && (
+                <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  Updated: {lastRefreshed.toLocaleTimeString()}
+                </span>
+              )}
             </div>
           </div>
         </CardContent>
@@ -589,7 +725,14 @@ export default function OrderManagement() {
       </Card>
 
       {/* Order Details Modal */}
-      {viewingOrder && <OrderDetailsModal order={viewingOrder} onClose={() => setViewingOrder(null)} onUpdateOrderStatus={handleUpdateOrderStatus} />}
+      {viewingOrder && (
+        <OrderDetailsModal 
+          order={viewingOrder} 
+          onClose={() => setViewingOrder(null)} 
+          onUpdateOrderStatus={handleUpdateOrderStatus}
+          onDeleteOrder={handleDeleteOrder}
+        />
+      )}
     </div>
   );
 }

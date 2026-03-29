@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Users, 
   Search, 
-  Edit, 
   Trash2, 
   Ban,
   CheckCircle,
@@ -44,6 +43,10 @@ export default function UserManagement() {
     role: 'all',
     dateRange: 'all',
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [actioningUserId, setActioningUserId] = useState<number | null>(null);
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -53,9 +56,27 @@ export default function UserManagement() {
     }
   }, [listAdminUsers]);
 
+  
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    if (!adminUsers || adminUsers.users.length === 0) {
+      loadUsers();
+      setLastRefreshed(new Date());
+    }
+    
+  }, []); 
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadUsers();
+      setLastRefreshed(new Date());
+      toast.success('Users refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh users');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const users = adminUsers?.users || [];
 
@@ -88,15 +109,18 @@ export default function UserManagement() {
     try {
       await deleteUser(userId);
       setSelectedUsers(prev => prev.filter(id => id !== userId));
+      setDeleteConfirmUserId(null);
       toast.success('User deleted successfully');
-      await loadUsers(); 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error(`Failed to delete user: ${errorMessage}`);
+    } finally {
+      setActioningUserId(null);
     }
   };
 
   const handleToggleUserStatus = async (userId: number, currentStatus: string) => {
+    setActioningUserId(userId);
     try {
       if (currentStatus === 'active') {
         await deactivateUser(userId);
@@ -105,10 +129,11 @@ export default function UserManagement() {
         await activateUser(userId);
         toast.success('User activated successfully');
       }
-      await loadUsers(); 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error(`Failed to update user status: ${errorMessage}`);
+    } finally {
+      setActioningUserId(null);
     }
   };
 
@@ -186,14 +211,32 @@ export default function UserManagement() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm" className="rounded-xl" onClick={handleExportUsers}>
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="rounded-xl bg-blue-600 dark:bg-blue-700 text-white border-blue-700 dark:border-blue-800 hover:bg-blue-700 dark:hover:bg-blue-800 shadow-lg shadow-blue-200/50 dark:shadow-none transition-all duration-200"
+            onClick={handleExportUsers}
+          >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" size="sm" className="rounded-xl" onClick={loadUsers}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="rounded-xl bg-emerald-600 dark:bg-emerald-700 text-white border-emerald-700 dark:border-emerald-800 hover:bg-emerald-700 dark:hover:bg-emerald-800 shadow-lg shadow-emerald-200/50 dark:shadow-none transition-all duration-200"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="Refresh users list"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          
+          {lastRefreshed && (
+            <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
+              Updated: {lastRefreshed.toLocaleTimeString()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -412,37 +455,89 @@ export default function UserManagement() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-lg"
-                          disabled
-                          title="Edit functionality not implemented"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-lg"
-                          onClick={() => handleToggleUserStatus(user.id, user.status)}
-                        >
+                      {deleteConfirmUserId === user.id ? (
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 border border-red-200 dark:border-red-800 text-sm space-y-2">
+                          <p className="font-medium text-red-900 dark:text-red-100">Delete user?</p>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg text-xs"
+                              onClick={() => setDeleteConfirmUserId(null)}
+                              disabled={actioningUserId === user.id}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="rounded-lg text-xs"
+                              onClick={() => handleDeleteUser(user.id)}
+                              disabled={actioningUserId === user.id}
+                            >
+                              {actioningUserId === user.id ? 'Deleting...' : 'Delete'}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
                           {user.status === 'active' ? (
-                            <Ban className="w-4 h-4" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all duration-200 shadow-sm"
+                              onClick={() => handleToggleUserStatus(user.id, user.status)}
+                              disabled={actioningUserId === user.id || user.role === 'admin'}
+                              title={user.role === 'admin' ? 'Cannot deactivate admin users' : 'Deactivate user'}
+                            >
+                              {actioningUserId === user.id ? (
+                                <>
+                                  <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-amber-600 border-t-transparent" />
+                                  Deactivating...
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="w-3 h-3 mr-1" />
+                                  Deactivate
+                                </>
+                              )}
+                            </Button>
                           ) : (
-                            <CheckCircle className="w-4 h-4" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all duration-200 shadow-sm"
+                              onClick={() => handleToggleUserStatus(user.id, user.status)}
+                              disabled={actioningUserId === user.id}
+                              title="Activate user"
+                            >
+                              {actioningUserId === user.id ? (
+                                <>
+                                  <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-emerald-600 border-t-transparent" />
+                                  Activating...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Activate
+                                </>
+                              )}
+                            </Button>
                           )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-lg text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-200 shadow-sm"
+                            onClick={() => setDeleteConfirmUserId(user.id)}
+                            disabled={actioningUserId === user.id || user.role === 'admin'}
+                            title={user.role === 'admin' ? 'Cannot delete admin users' : 'Delete user permanently'}
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -27,7 +27,7 @@ export const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
   steps = ['Cart', 'Shipping', 'Payment', 'Confirmation'],
   showOrderStatus = false,
 }) => {
-  const { getOrderDetails, currentOrder } = useOrders();
+  const { getOrderDetails, orderDetails } = useOrders();
   const icons = [ShoppingBag, Truck, CreditCard, Check, Package];
   
   
@@ -44,8 +44,8 @@ export const CheckoutSteps: React.FC<CheckoutStepsProps> = ({
     return ORDER_STATUS_STEPS[order.status as OrderStatus] || currentStep;
   };
 
-  const activeStep = showOrderStatus && currentOrder ? getStepFromOrderStatus(currentOrder) : currentStep;
-  const hasError = showOrderStatus && currentOrder?.status === 'rejected';
+  const activeStep = showOrderStatus && orderDetails?.order ? getStepFromOrderStatus(orderDetails.order) : currentStep;
+  const hasError = showOrderStatus && orderDetails?.order?.status === 'rejected';
 
   return (
     <div className="flex items-center justify-between w-full max-w-4xl mx-auto mb-12 relative">

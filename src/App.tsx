@@ -35,23 +35,14 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   return <>{children}</>;
 }
 
-export default function App() {
-  const { theme } = useThemeStore();
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+function AppContent() {
+  const { pathname } = useLocation();
+  const isAdminRoute = pathname.startsWith('/admin');
 
   return (
-    <Router>
-      <ScrollToTop />
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-grow">
+    <div className="flex flex-col min-h-screen">
+      {!isAdminRoute && <Header />}
+      <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
@@ -124,9 +115,27 @@ export default function App() {
             } />
           </Routes>
         </main>
-        <Footer />
+        {!isAdminRoute && <Footer />}
         <Toaster position="top-center" richColors />
       </div>
+    );
+  }
+
+export default function App() {
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  return (
+    <Router>
+      <ScrollToTop />
+      <AppContent />
     </Router>
   );
 }
