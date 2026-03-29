@@ -1,6 +1,6 @@
 import httpClient, { type ApiResponse } from './httpClient';
 
-export type PaymentGateway = 'MPESA' | 'Flutterwave' | 'DPO' | 'PesaPal';
+export type PaymentGateway = 'MPESA' | 'Flutterwave';
 
 export type InitiatePaymentRequest = {
   order_id: number;

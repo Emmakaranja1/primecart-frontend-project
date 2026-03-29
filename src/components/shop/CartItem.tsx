@@ -24,10 +24,14 @@ export default function CartItem({ item, onUpdateQuantity, onRemove }: CartItemP
       {/* Product Image */}
       <div className="w-full sm:w-32 h-32 rounded-2xl overflow-hidden bg-slate-50 flex-shrink-0 relative">
         <img 
-          src={product.image || 'https://picsum.photos/seed/product/400/500'} 
+          src={product.image?.startsWith('http') ? product.image : `https://${product.image || 'picsum.photos/seed/product/400/500'}`} 
           alt={product.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           referrerPolicy="no-referrer"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = 'https://picsum.photos/seed/product/400/500';
+          }}
         />
       </div>
 

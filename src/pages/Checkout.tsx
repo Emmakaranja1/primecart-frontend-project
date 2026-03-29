@@ -13,11 +13,13 @@ import type { PaymentGateway } from '@/api/paymentService';
 export default function Checkout() {
   const { cart, getCart } = useCartStore();
   const { placeOrder, isLoading: isOrderLoading } = useOrderStore();
-  const { getPaymentMethods, initiate } = usePaymentStore();
+  const { getPaymentMethods, initiate, mpesaStkPush, flutterwavePay } = usePaymentStore();
   const navigate = useNavigate();
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [selectedGateway, setSelectedGateway] = useState<PaymentGateway>('MPESA');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     getCart();
@@ -27,6 +29,28 @@ export default function Checkout() {
   const handlePlaceOrder = async () => {
     if (!shippingAddress) {
       toast.error('Please enter a shipping address');
+      return;
+    }
+
+    // Validate phone number for M-Pesa
+    if (selectedGateway === 'MPESA' && !phoneNumber) {
+      toast.error('Please enter your M-Pesa phone number');
+      return;
+    }
+
+    if (selectedGateway === 'MPESA' && phoneNumber.length < 9) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+
+    // Validate email for Flutterwave
+    if (selectedGateway === 'Flutterwave' && !email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    if (selectedGateway === 'Flutterwave' && !email.includes('@')) {
+      toast.error('Please enter a valid email address');
       return;
     }
 
@@ -40,27 +64,61 @@ export default function Checkout() {
       if (orderRes.success && orderRes.data) {
         // Step 2: Initiate payment with the order ID
         try {
-          const paymentRes = await initiate({
-            order_id: orderRes.data.order_id,
-            gateway: selectedGateway,
-            callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
-          });
+          let paymentRes;
+          
+          if (selectedGateway === 'MPESA') {
+            // Use M-Pesa STK Push for M-Pesa payments
+            paymentRes = await mpesaStkPush({
+              order_id: orderRes.data.order_id,
+              phone_number: phoneNumber,
+              callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
+            });
+          } else if (selectedGateway === 'Flutterwave') {
+            // Use Flutterwave specific function with email
+            paymentRes = await flutterwavePay({
+              order_id: orderRes.data.order_id,
+              email: email,
+              callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
+            });
+          } else {
+            // Use generic initiate for other payment methods
+            paymentRes = await initiate({
+              order_id: orderRes.data.order_id,
+              gateway: selectedGateway,
+              callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
+            });
+          }
           
           if (paymentRes.success && paymentRes.data) {
-            toast.success('Order placed! Redirecting to payment...');
-            // Redirect based on payment gateway response
-            if (paymentRes.data.gateway_response && typeof paymentRes.data.gateway_response === 'object') {
-              const gatewayResponse = paymentRes.data.gateway_response as any;
-              if (gatewayResponse.redirect_url) {
-                window.location.href = gatewayResponse.redirect_url;
-              } else if (gatewayResponse.checkout_url) {
-                window.location.href = gatewayResponse.checkout_url;
+            if (selectedGateway === 'MPESA') {
+              toast.success('Order placed! Check your phone for M-Pesa STK Push prompt...');
+              // For M-Pesa, navigate to order confirmation page
+              navigate(`/order-confirmation?order_id=${orderRes.data.order_id}`);
+            } else if (selectedGateway === 'Flutterwave') {
+              toast.success('Order placed! Redirecting to Flutterwave payment...');
+              // For Flutterwave, check for payment link
+              const flutterwaveData = paymentRes.data as any;
+              if (flutterwaveData.payment_link) {
+                window.location.href = flutterwaveData.payment_link;
               } else {
-                // Fallback to order confirmation
                 navigate(`/order-confirmation?order_id=${orderRes.data.order_id}`);
               }
             } else {
-              navigate(`/order-confirmation?order_id=${orderRes.data.order_id}`);
+              toast.success('Order placed! Redirecting to payment...');
+              // For other payment methods, check for redirect URLs
+              const initiateData = paymentRes.data as any;
+              if (initiateData.gateway_response && typeof initiateData.gateway_response === 'object') {
+                const gatewayResponse = initiateData.gateway_response;
+                if (gatewayResponse.redirect_url) {
+                  window.location.href = gatewayResponse.redirect_url;
+                } else if (gatewayResponse.checkout_url) {
+                  window.location.href = gatewayResponse.checkout_url;
+                } else {
+                  navigate(`/order-confirmation?order_id=${orderRes.data.order_id}`);
+                }
+              } else {
+                navigate(`/order-confirmation?order_id=${orderRes.data.order_id}`);
+              }
             }
           } else {
             toast.error('Failed to initiate payment');
@@ -119,6 +177,10 @@ export default function Checkout() {
               <PaymentMethods 
                 selectedMethod={selectedGateway}
                 onMethodSelect={(method) => setSelectedGateway(method as PaymentGateway)}
+                onPhoneNumberChange={setPhoneNumber}
+                phoneNumber={phoneNumber}
+                onEmailChange={setEmail}
+                email={email}
               />
             </section>
           </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Smartphone, Globe, CheckCircle, Clock, Shield, Zap } from 'lucide-react';
+import { CreditCard, Smartphone, CheckCircle, Clock, Shield, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../ui/Card';
 import { usePayment } from '../../hooks/usePayment';
@@ -9,14 +9,18 @@ import type { PaymentMethodInfo, PaymentGateway } from '../../types/payment';
 interface PaymentMethodsProps {
   selectedMethod?: string;
   onMethodSelect?: (method: string) => void;
+  onPhoneNumberChange?: (phone: string) => void;
+  phoneNumber?: string;
+  onEmailChange?: (email: string) => void;
+  email?: string;
   className?: string;
 }
+
+const ALLOWED_PAYMENT_METHODS = ['MPESA', 'Flutterwave'] as const;
 
 const methodIcons = {
   MPESA: Smartphone,
   Flutterwave: CreditCard,
-  DPO: Globe,
-  PesaPal: CreditCard,
 };
 
 const methodDetails: Record<PaymentGateway, {
@@ -42,28 +46,16 @@ const methodDetails: Record<PaymentGateway, {
     color: 'from-blue-500 to-cyan-600',
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-700'
-  },
-  DPO: {
-    features: ['Enterprise payments', 'Multi-currency', 'Bulk payments'],
-    processingTime: '2-5 minutes',
-    security: 'Enterprise security',
-    color: 'from-purple-500 to-indigo-600',
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-700'
-  },
-  PesaPal: {
-    features: ['Local payments', 'Easy integration', 'Multiple methods'],
-    processingTime: 'Instant',
-    security: 'SSL encrypted',
-    color: 'from-orange-500 to-red-600',
-    bgColor: 'bg-orange-50',
-    textColor: 'text-orange-700'
   }
 };
 
 export default function PaymentMethods({
   selectedMethod,
   onMethodSelect,
+  onPhoneNumberChange,
+  phoneNumber,
+  onEmailChange,
+  email,
   className
 }: PaymentMethodsProps) {
   const { paymentMethods, isLoading, getPaymentMethods } = usePayment();
@@ -102,7 +94,7 @@ export default function PaymentMethods({
         <p className="text-slate-600">Select your preferred payment gateway</p>
       </div>
 
-      {typedPaymentMethods?.map((method) => {
+      {typedPaymentMethods?.filter(method => ALLOWED_PAYMENT_METHODS.includes(method.name as any)).map((method) => {
         const Icon = methodIcons[method.name as keyof typeof methodIcons] || CreditCard;
         const details = methodDetails[method.name as keyof typeof methodDetails];
         const isSelected = selectedMethod === method.name;
@@ -211,12 +203,72 @@ export default function PaymentMethods({
         );
       })}
 
-      {!typedPaymentMethods?.length && (
+      {!typedPaymentMethods?.filter(method => ALLOWED_PAYMENT_METHODS.includes(method.name as any)).length && (
         <div className="text-center py-12">
           <CreditCard className="w-20 h-20 text-slate-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-slate-500 mb-2">No payment methods available</h3>
           <p className="text-slate-400">Please check back later or contact support</p>
         </div>
+      )}
+
+      {/* M-Pesa Phone Number Input */}
+      {selectedMethod === 'MPESA' && onPhoneNumberChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mt-6"
+        >
+          <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <Smartphone className="w-5 h-5 text-green-600" />
+                <h4 className="font-semibold text-green-800 dark:text-green-200">M-Pesa Phone Number</h4>
+              </div>
+              <input
+                type="tel"
+                placeholder="254XXXXXXXXX"
+                value={phoneNumber || ''}
+                onChange={(e) => onPhoneNumberChange(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-800 bg-white dark:bg-slate-800 text-green-900 dark:text-green-100 placeholder-green-400 dark:placeholder-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                pattern="254[0-9]{9}"
+                maxLength={12}
+              />
+              <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                Enter your M-Pesa number in format: 254XXXXXXXXX
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Flutterwave Email Input */}
+      {selectedMethod === 'Flutterwave' && onEmailChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mt-6"
+        >
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <CreditCard className="w-5 h-5 text-blue-600" />
+                <h4 className="font-semibold text-blue-800 dark:text-blue-200">Email Address</h4>
+              </div>
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email || ''}
+                onChange={(e) => onEmailChange(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 text-blue-900 dark:text-blue-100 placeholder-blue-400 dark:placeholder-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                Enter your email address for Flutterwave payment
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
     </div>
   );

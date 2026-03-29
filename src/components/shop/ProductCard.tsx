@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, ArrowRight } from 'lucide-react';
+import { ShoppingCart, ArrowRight, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
@@ -99,16 +99,31 @@ return (
             </div>
           )}
 
-          {/* Quick Add Overlay */}
-          <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/60 to-transparent">
+          {/* Action Buttons - Always Visible */}
+        <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+          <div className="flex gap-2">
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/products/${product.id}`);
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg"
+              size="sm"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View
+            </Button>
             <Button 
               onClick={handleAddToCart}
-              className="w-full bg-white dark:bg-slate-800 text-primary dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 border-none"
+              className="flex-1 bg-white dark:bg-slate-800 text-primary dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 border-none shadow-lg"
+              size="sm"
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
               Quick Add
             </Button>
           </div>
+        </div>
         </div>
 
         {/* Content */}

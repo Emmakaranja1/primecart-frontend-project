@@ -1,4 +1,4 @@
-export type PaymentGateway = 'MPESA' | 'Flutterwave' | 'DPO' | 'PesaPal';
+export type PaymentGateway = 'MPESA' | 'Flutterwave';
 
 export type PaymentMethodInfo = {
   name: PaymentGateway;
