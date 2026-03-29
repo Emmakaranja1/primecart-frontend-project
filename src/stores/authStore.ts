@@ -76,7 +76,7 @@ function loadTokenFromStorage(): string | null {
   }
 }
 
-export const useAuthStore = create<AuthStoreState>((set) => {
+export const useAuthStore = create<AuthStoreState>((set, get) => {
   const initialToken = loadTokenFromStorage();
 
   return {
@@ -199,6 +199,7 @@ export const useAuthStore = create<AuthStoreState>((set) => {
 
     logout: async () => {
       set({ isLoading: true, error: null, message: null });
+      
       try {
         await authService.logout();
       } catch (e) {
@@ -206,6 +207,9 @@ export const useAuthStore = create<AuthStoreState>((set) => {
         const apiError = normalizeApiError(e);
         set({ error: apiError });
       } finally {
+        
+        const currentUser = get().user;
+        
         try {
           localStorage.removeItem('token');
         } catch {
@@ -214,8 +218,14 @@ export const useAuthStore = create<AuthStoreState>((set) => {
 
         set({ token: null, user: null, isAuthenticated: false, isLoading: false, message: null });
 
-        if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-          window.location.href = '/';
+        
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname;
+          
+          
+          if (!currentUser?.role?.includes('admin') || currentPath !== '/') {
+            window.location.href = '/';
+          }
         }
       }
     },

@@ -37,10 +37,10 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 md:px-8 py-4',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 md:px-12 py-6',
         isScrolled 
-          ? 'bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-blue-900/90 backdrop-blur-lg shadow-lg py-3 border-b border-purple-500/20' 
-          : 'bg-gradient-to-r from-purple-800/80 via-indigo-800/80 to-blue-800/80 backdrop-blur-md'
+          ? 'bg-gradient-to-r from-purple-950/95 via-indigo-950/95 to-blue-950/95 backdrop-blur-lg shadow-lg py-5 border-b border-purple-600/30' 
+          : 'bg-gradient-to-r from-purple-900/85 via-indigo-900/85 to-blue-900/85 backdrop-blur-md'
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -99,10 +99,10 @@ export default function Navbar() {
               key={link.name}
               to={link.path}
               className={cn(
-                'text-sm font-medium transition-all duration-300 hover:scale-105 px-3 py-1 rounded-full',
+                'text-base font-semibold transition-all duration-300 hover:scale-105 px-4 py-2 rounded-full',
                 location.pathname === link.path 
-                  ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-cyan-300 border border-purple-400/30 shadow-lg shadow-purple-500/20' 
-                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+                  ? 'bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-cyan-200 border border-purple-400/40 shadow-lg shadow-purple-500/30' 
+                  : 'text-slate-200 hover:text-white hover:bg-white/15'
               )}
             >
               {link.name}
@@ -128,7 +128,7 @@ export default function Navbar() {
               <Link to="/profile">
                 <Button variant="ghost" size="sm" className="hidden md:flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full transition-all duration-300 hover:scale-105">
                   <User className="w-4 h-4" />
-                  <span>{user?.username}</span>
+                  <span className="font-medium text-base">{user?.username}</span>
                 </Button>
               </Link>
               <Button variant="ghost" size="icon" onClick={() => logout()} title="Logout" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full transition-all duration-300 hover:scale-105">
@@ -169,7 +169,7 @@ export default function Navbar() {
                 key={link.name}
                 to={link.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="text-lg font-medium py-2 border-b border-purple-500/20 text-slate-200 hover:text-white transition-colors duration-300"
+                className="text-xl font-semibold py-2 border-b border-purple-500/20 text-slate-100 hover:text-white transition-colors duration-300"
               >
                 {link.name}
               </Link>
