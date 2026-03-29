@@ -93,16 +93,8 @@ export const useAuthStore = create<AuthStoreState>((set) => {
       try {
         const res = await authService.register(payload);
 
-        try {
-          localStorage.setItem('token', res.token);
-        } catch {
-          
-        }
-
+        
         set({
-          token: res.token,
-          user: res.user as AuthUser,
-          isAuthenticated: true,
           isLoading: false,
         });
 

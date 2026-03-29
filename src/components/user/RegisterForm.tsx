@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff, Phone } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,6 +12,8 @@ export default function RegisterForm() {
     email: '',
     password: '',
     password_confirmation: '',
+    phone_number: '',
+    address: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -26,8 +28,8 @@ export default function RegisterForm() {
     }
     try {
       await register(formData);
-      toast.success('Account created successfully!');
-      navigate('/');
+      toast.success('Account created successfully! Please login with your new credentials.');
+      navigate('/login');
     } catch (error: any) {
       toast.error(error.message || 'Registration failed. Please try again.');
     }
@@ -67,6 +69,33 @@ export default function RegisterForm() {
                 className="pl-12 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 border-none focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-primary/10 dark:focus:ring-blue-400/10 transition-all font-bold text-lg dark:text-white"
                 placeholder="name@example.com"
                 required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">Phone Number (Optional)</label>
+            <div className="relative group">
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-700 group-focus-within:text-primary dark:group-focus-within:text-blue-400 transition-colors" />
+              <Input
+                type="tel"
+                value={formData.phone_number}
+                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                className="pl-12 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 border-none focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-primary/10 dark:focus:ring-blue-400/10 transition-all font-bold text-lg dark:text-white"
+                placeholder="+254 7XX XXX XXX"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">Address (Optional)</label>
+            <div className="relative group">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-700 group-focus-within:text-primary dark:group-focus-within:text-blue-400 transition-colors" />
+              <Input
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="pl-12 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 border-none focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-primary/10 dark:focus:ring-blue-400/10 transition-all font-bold text-lg dark:text-white"
+                placeholder="Enter your address"
               />
             </div>
           </div>
@@ -122,7 +151,7 @@ export default function RegisterForm() {
 
         <Button 
           type="submit" 
-          className="w-full h-16 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
+          className="w-full h-16 rounded-2xl text-lg font-black bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all group border-0"
           disabled={isLoading}
         >
           <span>{isLoading ? 'Creating Account...' : 'Create Account'}</span>

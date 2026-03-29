@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/ui/Button';
 import { ShoppingCart, Plus, Minus, Heart } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
+import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import type { Product } from '@/types/product';
 
@@ -11,9 +13,17 @@ interface ProductActionsProps {
 
 export default function ProductActions({ product }: ProductActionsProps) {
   const { addToCart } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      toast.info('Please login or register to add items to cart');
+      navigate('/login?reason=add_to_cart');
+      return;
+    }
+    
     try {
       await addToCart({ product_id: product.id, quantity });
       toast.success(`${product.title} added to cart`);

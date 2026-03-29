@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/ui/Button';
@@ -6,6 +6,7 @@ import { Badge } from '@/ui/Badge';
 import type { Product } from '@/types/product';
 import { formatCurrency } from '@/utils/helpers';
 import { useCart } from '@/hooks/useCart';
+import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
@@ -50,11 +51,20 @@ const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
+  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
   const rating = getProductRating(product.id);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.info('Please login or register to add items to cart');
+      navigate('/login?reason=add_to_cart');
+      return;
+    }
+    
     try {
       await addItem({ product_id: product.id, quantity: 1 });
       toast.success(`${product.title} added to cart`);

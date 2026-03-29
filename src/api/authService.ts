@@ -25,7 +25,7 @@ export type AuthRegisterResponse = {
 };
 
 export type AuthLoginRequest = {
-  username: string;
+  email: string;
   password: string;
 };
 

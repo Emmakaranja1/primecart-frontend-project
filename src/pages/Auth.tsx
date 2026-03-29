@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import LoginForm from '../components/user/LoginForm';
 import RegisterForm from '../components/user/RegisterForm';
 import PasswordReset from '../components/user/PasswordReset';
-import { ShieldCheck, Sparkles, Zap } from 'lucide-react';
+import { ShieldCheck, Sparkles, Zap, ShoppingCart } from 'lucide-react';
 import Loading from '@/ui/Loading';
 
 export default function Auth() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, isLoading } = useAuth();
   
   const isRegister = location.pathname === '/register';
   const isForgot = location.pathname === '/forgot-password';
+  const redirectReason = searchParams.get('reason'); 
 
   const [view, setView] = useState<'login' | 'register' | 'forgot'>(
     isRegister ? 'register' : isForgot ? 'forgot' : 'login'
@@ -124,6 +126,27 @@ export default function Auth() {
       {/* Right Side: Form */}
       <div className="flex-1 flex items-center justify-center p-8 md:p-20 bg-white dark:bg-slate-950 transition-colors duration-300">
         <div className="w-full max-w-md">
+          {/* Cart Redirect Notice */}
+          {redirectReason === 'add_to_cart' && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl"
+            >
+              <div className="flex items-start space-x-3">
+                <ShoppingCart className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                    Authentication Required
+                  </h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Please sign in or create an account to add items to your cart and continue shopping.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           <AnimatePresence mode="wait">
             <motion.div
               key={view}
