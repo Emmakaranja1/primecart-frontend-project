@@ -200,7 +200,15 @@ export type PaymentFailedData = {
 
 export const paymentService = {
   initiate: async (payload: InitiatePaymentRequest): Promise<ApiResponse<InitiatePaymentData>> => {
-    return httpClient.post<InitiatePaymentData>('/payment/initiate', payload);
+    console.log('Payment Initiate API Call:', payload);
+    try {
+      const response = await httpClient.post<InitiatePaymentData>('/payment/initiate', payload);
+      console.log('Payment Initiate Response:', response);
+      return response;
+    } catch (error) {
+      console.error('Payment Initiate Error:', error);
+      throw error;
+    }
   },
 
   verify: async (payload: VerifyPaymentRequest): Promise<ApiResponse<VerifyPaymentData>> => {
@@ -208,7 +216,15 @@ export const paymentService = {
   },
 
   getPaymentMethods: async (): Promise<ApiResponse<PaymentMethodsData>> => {
-    return httpClient.get<PaymentMethodsData>('/payment/methods');
+    console.log('Get Payment Methods API Call');
+    try {
+      const response = await httpClient.get<PaymentMethodsData>('/payment/methods');
+      console.log('Get Payment Methods Response:', response);
+      return response;
+    } catch (error) {
+      console.error('Get Payment Methods Error:', error);
+      throw error;
+    }
   },
 
   getPaymentStatus: async (paymentId: number): Promise<ApiResponse<PaymentStatusData>> => {
@@ -216,7 +232,15 @@ export const paymentService = {
   },
 
   mpesaStkPush: async (payload: MpesaStkPushRequest): Promise<ApiResponse<MpesaStkPushData>> => {
-    return httpClient.post<MpesaStkPushData>('/payment/mpesa/stk-push', payload);
+    console.log('M-Pesa STK Push API Call:', payload);
+    try {
+      const response = await httpClient.post<MpesaStkPushData>('/payment/mpesa/stk-push', payload);
+      console.log('M-Pesa STK Push Response:', response);
+      return response;
+    } catch (error) {
+      console.error('M-Pesa STK Push Error:', error);
+      throw error;
+    }
   },
 
   mpesaStatus: async (paymentId: number): Promise<ApiResponse<MpesaStatusData>> => {
@@ -226,7 +250,15 @@ export const paymentService = {
   flutterwavePay: async (
     payload: FlutterwavePayRequest,
   ): Promise<ApiResponse<FlutterwavePayData>> => {
-    return httpClient.post<FlutterwavePayData>('/payment/flutterwave/pay', payload);
+    console.log('Flutterwave Pay API Call:', payload);
+    try {
+      const response = await httpClient.post<FlutterwavePayData>('/payment/flutterwave/pay', payload);
+      console.log('Flutterwave Pay Response:', response);
+      return response;
+    } catch (error) {
+      console.error('Flutterwave Pay Error:', error);
+      throw error;
+    }
   },
 
   flutterwaveVerify: async (reference: string): Promise<ApiResponse<FlutterwaveVerifyData>> => {

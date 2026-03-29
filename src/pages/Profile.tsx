@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useUser } from '@/hooks/useUser';
+import { useOrders } from '@/hooks/useOrders';
 import ProfileForm from '@/components/user/ProfileForm';
 import AddressForm from '@/components/user/AddressForm';
 import OrderHistory from '@/components/user/OrderHistory';
@@ -15,11 +16,18 @@ import type { UpdateProfileRequest } from '@/api/userService';
 export default function Profile() {
   const { user, logout } = useAuth();
   const { profile, getProfile, updateProfile, isLoading } = useUser();
+  const { getOrders } = useOrders();
   const [activeTab, setActiveTab] = useState<'profile' | 'address' | 'orders' | 'security'>('profile');
 
   useEffect(() => {
     getProfile();
   }, [getProfile]);
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      getOrders();
+    }
+  }, [activeTab, getOrders]);
 
   const handleLogout = () => {
     logout();

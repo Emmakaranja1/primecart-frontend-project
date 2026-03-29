@@ -1,21 +1,207 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ArrowRight, Package, ShoppingBag, Home } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import OrderDetails from '@/components/user/OrderDetails';
 import { useOrders } from '@/hooks/useOrders';
+import { usePayment } from '@/hooks/usePayment';
+import { toast } from 'sonner';
 
 export default function OrderConfirmation() {
   const location = useLocation();
   const order = location.state?.order;
   const { orderDetails, getOrderDetails, isLoading, error } = useOrders();
+  const { flutterwaveVerify, mpesaStatus } = usePayment();
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+
+  
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const orderId = urlParams.get('order_id');
+    const transactionId = urlParams.get('transaction_id') || urlParams.get('tx_ref');
+    const status = urlParams.get('status');
+    
+    
+    if (orderId && transactionId && (status === 'successful' || status === 'completed')) {
+      console.log('Starting auto-verification from URL params:', { orderId, transactionId, status });
+      startAutoVerification(transactionId);
+    }
+  }, [location.search]);
+
+  const startMpesaAutoVerification = (paymentId: string) => {
+    if (verifyingPayment) return;
+    
+    setVerifyingPayment(true);
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const verifyInterval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        console.log(`M-Pesa auto verification attempt ${attempts}/${maxAttempts} for payment:`, paymentId);
+        const result = await mpesaStatus(parseInt(paymentId));
+        
+        if (result.success && result.data) {
+          const paymentStatus = result.data.status;
+          
+          console.log('M-Pesa verification response:', {
+            status: paymentStatus,
+            payment_id: result.data.payment_id,
+            transaction_id: result.data.transaction_id,
+            amount: result.data.amount,
+            verification_result: result.data.verification_result
+          });
+          
+          
+          if (paymentStatus === 'completed' || paymentStatus === 'paid') {
+            clearInterval(verifyInterval);
+            setVerifyingPayment(false);
+            setPaymentVerified(true);
+            toast.success('M-Pesa payment completed successfully!');
+            
+            
+            if (order?.id) {
+              setTimeout(() => {
+                getOrderDetails(parseInt(order.id));
+              }, 1000);
+            }
+          } else if (paymentStatus === 'failed') {
+            clearInterval(verifyInterval);
+            setVerifyingPayment(false);
+            setPaymentVerified(false);
+            toast.error('M-Pesa payment failed. Please try again.');
+            
+            
+            if (order?.id) {
+              setTimeout(() => {
+                getOrderDetails(parseInt(order.id));
+              }, 1000);
+            }
+          } else if (paymentStatus === 'processing') {
+            
+            console.log('M-Pesa payment still processing, continuing verification...');
+          } else if (attempts >= maxAttempts) {
+            
+            clearInterval(verifyInterval);
+            setVerifyingPayment(false);
+            toast.warning('M-Pesa payment verification timed out. Please check your order status later.');
+          }
+        }
+      } catch (error) {
+        console.error('M-Pesa verification attempt failed:', error);
+        
+        if (attempts >= maxAttempts) {
+          clearInterval(verifyInterval);
+          setVerifyingPayment(false);
+          toast.error('Unable to verify M-Pesa payment status. Please contact support.');
+        }
+      }
+    }, 12000); 
+    
+    
+    return () => clearInterval(verifyInterval);
+  };
+
+  const startAutoVerification = (transactionId: string) => {
+    if (verifyingPayment) return;
+    
+    setVerifyingPayment(true);
+    let attempts = 0;
+    const maxAttempts = 10; 
+    
+    const verifyInterval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        console.log(`Auto verification attempt ${attempts}/${maxAttempts} for transaction:`, transactionId);
+        const result = await flutterwaveVerify(transactionId);
+        
+        if (result.success && result.data) {
+          const paymentStatus = result.data.status;
+          
+          console.log('Payment verification response:', {
+            status: paymentStatus,
+            payment_id: result.data.payment_id,
+            transaction_id: result.data.transaction_id,
+            gateway_reference: result.data.gateway_reference,
+            verification_result: result.data.verification_result
+          });
+          
+          
+          if (paymentStatus === 'completed') {
+            clearInterval(verifyInterval);
+            setVerifyingPayment(false);
+            setPaymentVerified(true);
+            toast.success('Payment completed successfully!');
+            
+            
+            if (order?.id) {
+              setTimeout(() => {
+                getOrderDetails(parseInt(order.id));
+              }, 1000);
+            }
+          } else if (paymentStatus === 'failed') {
+            clearInterval(verifyInterval);
+            setVerifyingPayment(false);
+            setPaymentVerified(false);
+            toast.error('Payment failed. Please try again.');
+            
+        
+            if (order?.id) {
+              setTimeout(() => {
+                getOrderDetails(parseInt(order.id));
+              }, 1000);
+            }
+          } else if (paymentStatus === 'processing') {
+            
+            console.log('Payment still processing, continuing verification...');
+          } else if (attempts >= maxAttempts) {
+            
+            clearInterval(verifyInterval);
+            setVerifyingPayment(false);
+            toast.warning('Payment verification timed out. Please check your order status later.');
+          }
+        }
+      } catch (error) {
+        console.error('Verification attempt failed:', error);
+        
+        if (attempts >= maxAttempts) {
+          clearInterval(verifyInterval);
+          setVerifyingPayment(false);
+          toast.error('Unable to verify payment status. Please contact support.');
+        }
+      }
+    }, 12000); 
+    
+    
+    return () => clearInterval(verifyInterval);
+  };
 
   useEffect(() => {
     if (order?.id) {
       getOrderDetails(parseInt(order.id));
     }
   }, [order, getOrderDetails]);
+
+  
+  useEffect(() => {
+    if (orderDetails?.order?.payment_status === 'pending' && 
+        orderDetails?.order?.payment_transaction_id &&
+        !verifyingPayment &&
+        !paymentVerified) {
+      
+      if (orderDetails?.order?.payment_method === 'Flutterwave') {
+        console.log('Starting auto-verification for pending Flutterwave payment:', orderDetails.order.payment_transaction_id);
+        startAutoVerification(orderDetails.order.payment_transaction_id);
+      } else if (orderDetails?.order?.payment_method === 'MPESA') {
+        console.log('Starting auto-verification for pending M-Pesa payment:', orderDetails.order.payment_transaction_id);
+        startMpesaAutoVerification(orderDetails.order.payment_transaction_id);
+      }
+    }
+  }, [orderDetails]);
 
   if (!order) {
     return <Navigate to="/" />;
@@ -84,6 +270,56 @@ export default function OrderConfirmation() {
           >
             Thank you for your purchase. Your order <span className="text-primary dark:text-blue-400 font-bold">#{order.id.slice(-8)}</span> has been placed successfully.
           </motion.p>
+          
+          {verifyingPayment && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-4 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800"
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <div className="text-left">
+                  <span className="text-blue-600 dark:text-blue-400 font-medium">Verifying payment status...</span>
+                  <p className="text-blue-500 dark:text-blue-500 text-sm">This may take a few moments</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
+          {paymentVerified && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-4 p-4 bg-green-100 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-800"
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div className="text-left">
+                  <span className="text-green-600 dark:text-green-400 font-medium">Payment completed successfully!</span>
+                  <p className="text-green-500 dark:text-green-500 text-sm">Your order has been confirmed</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
+          {orderDetails?.order?.payment_status === 'failed' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-xl border border-red-200 dark:border-red-800"
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <div className="w-5 h-5 bg-red-600 dark:bg-red-400 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">!</span>
+                </div>
+                <div className="text-left">
+                  <span className="text-red-600 dark:text-red-400 font-medium">Payment failed</span>
+                  <p className="text-red-500 dark:text-red-500 text-sm">Please try again or contact support</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         <motion.div

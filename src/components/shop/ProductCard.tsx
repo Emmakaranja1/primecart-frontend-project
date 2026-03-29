@@ -26,21 +26,20 @@ const getProductImage = (product: Product) => {
     
     if (imageUrl) {
       
-      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+      if (imageUrl.startsWith('ttps://')) {
+        imageUrl = 'https://' + imageUrl.substring(7); 
+      } else if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
         imageUrl = `https://${imageUrl}`;
       }
-      
       
       try {
         new URL(imageUrl);
         return imageUrl;
       } catch {
-        
         return `https://picsum.photos/seed/${product.id}/600/800`;
       }
     }
   }
-  
   
   return `https://picsum.photos/seed/${product.id}/600/800`;
 };

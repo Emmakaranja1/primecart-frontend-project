@@ -24,6 +24,7 @@ export type OrderListItem = {
   payment_method: string;
   created_at: string;
   items_count: number;
+  payment_transaction_id?: string | null;
 };
 
 export type OrderListData = {
@@ -63,6 +64,7 @@ export type OrderDetailsData = {
     created_at: string;
     approved_at?: string | null;
     delivered_at?: string | null;
+    payment_transaction_id?: string | null;
   };
   items: OrderItem[];
 };
@@ -131,7 +133,15 @@ export type AdminOrderListData = {
 
 export const orderService = {
   placeOrder: async (payload: PlaceOrderRequest): Promise<ApiResponse<PlacedOrderData>> => {
-    return httpClient.post<PlacedOrderData>('/orders', payload);
+    console.log('Place Order API Call:', payload);
+    try {
+      const response = await httpClient.post<PlacedOrderData>('/orders', payload);
+      console.log('Place Order Response:', response);
+      return response;
+    } catch (error) {
+      console.error('Place Order Error:', error);
+      throw error;
+    }
   },
 
   getOrders: async (params?: OrderListQuery): Promise<ApiResponse<OrderListData>> => {

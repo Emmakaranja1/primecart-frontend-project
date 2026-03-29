@@ -83,7 +83,20 @@ class HttpClient {
   private setupRequestInterceptor(): void {
     this.instance.interceptors.request.use((config) => {
       const token = this.getToken();
-      if (!token) return config;
+      
+      
+      console.log('API Request:', {
+        url: config.url,
+        method: config.method,
+        hasToken: !!token,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+        headers: config.headers
+      });
+      
+      if (!token) {
+        console.warn('No authentication token found for request:', config.url);
+        return config;
+      }
 
       const headers = config.headers;
       const maybeHeadersWithSet = headers as unknown as { set?: unknown };
@@ -99,6 +112,13 @@ class HttpClient {
         requestHeaders.Authorization = `Bearer ${token}`;
         config.headers = requestHeaders;
       }
+      
+      console.log('Request with auth:', {
+        url: config.url,
+        method: config.method,
+        authHeader: config.headers?.Authorization
+      });
+      
       return config;
     });
   }
@@ -117,6 +137,19 @@ class HttpClient {
   }
 
   private normalizeError(error: AxiosError): ApiError {
+    const errorDetails = {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url,
+      method: error.config?.method,
+      requestData: error.config?.data
+    };
+    
+    console.error('API Error Details:', errorDetails);
+
     if (!error.response) {
       return {
         success: false,
@@ -129,6 +162,19 @@ class HttpClient {
     const payloadObj = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null;
 
     
+    if (status === 422 && payloadObj?.errors) {
+      console.error('Validation Errors:', payloadObj.errors);
+    }
+    
+    
+    if (status === 400) {
+      console.error('400 Bad Request Details:', {
+        message: payloadObj?.message,
+        errors: payloadObj?.errors,
+        debug: payloadObj?.debug
+      });
+    }
+
     const message =
       typeof payloadObj?.message === 'string'
         ? payloadObj.message

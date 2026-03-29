@@ -227,15 +227,25 @@ export default function PaymentMethods({
               </div>
               <input
                 type="tel"
-                placeholder="254XXXXXXXXX"
+                placeholder="254712345678"
                 value={phoneNumber || ''}
-                onChange={(e) => onPhoneNumberChange(e.target.value)}
+                onChange={(e) => {
+                  let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+                  
+                  if (value.length === 10 && value.startsWith('0')) {
+                    value = '254' + value.substring(1);
+                  } else if (value.length === 9 && value.startsWith('7')) {
+                    value = '254' + value;
+                  }
+                  onPhoneNumberChange?.(value);
+                }}
                 className="w-full px-4 py-3 rounded-xl border border-green-200 dark:border-green-800 bg-white dark:bg-slate-800 text-green-900 dark:text-green-100 placeholder-green-400 dark:placeholder-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 pattern="254[0-9]{9}"
                 maxLength={12}
               />
               <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                Enter your M-Pesa number in format: 254XXXXXXXXX
+                Format: 254712345678 (Kenya numbers only)<br/>
+                You can also enter: 0712345678 or 712345678
               </p>
             </CardContent>
           </Card>

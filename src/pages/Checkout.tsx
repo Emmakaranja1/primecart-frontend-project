@@ -33,17 +33,26 @@ export default function Checkout() {
     }
 
     // Validate phone number for M-Pesa
-    if (selectedGateway === 'MPESA' && !phoneNumber) {
-      toast.error('Please enter your M-Pesa phone number');
-      return;
+    if (selectedGateway === 'MPESA') {
+      if (!phoneNumber) {
+        toast.error('Please enter your M-Pesa phone number');
+        return;
+      }
+      
+    
+      const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+      
+      
+      if (!/^254[0-9]{9}$/.test(cleanPhone)) {
+        toast.error('Please enter a valid M-Pesa number in format: 254XXXXXXXXX');
+        return;
+      }
+      
+      
+      setPhoneNumber(cleanPhone);
     }
 
-    if (selectedGateway === 'MPESA' && phoneNumber.length < 9) {
-      toast.error('Please enter a valid phone number');
-      return;
-    }
-
-    // Validate email for Flutterwave
+    
     if (selectedGateway === 'Flutterwave' && !email) {
       toast.error('Please enter your email address');
       return;
@@ -68,16 +77,28 @@ export default function Checkout() {
           
           if (selectedGateway === 'MPESA') {
             // Use M-Pesa STK Push for M-Pesa payments
+            const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+            
+            console.log('About to call M-Pesa STK Push with:', {
+              order_id: orderRes.data.order_id,
+              phone_number: cleanPhone
+            });
+            
             paymentRes = await mpesaStkPush({
               order_id: orderRes.data.order_id,
-              phone_number: phoneNumber,
-              callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
+              phone_number: cleanPhone
             });
           } else if (selectedGateway === 'Flutterwave') {
             // Use Flutterwave specific function with email
             paymentRes = await flutterwavePay({
               order_id: orderRes.data.order_id,
-              email: email,
+              email: email.trim().toLowerCase(),
+              callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
+            });
+            
+            console.log('Flutterwave Pay Request:', {
+              order_id: orderRes.data.order_id,
+              email: email.trim().toLowerCase(),
               callback_url: `${window.location.origin}/order-confirmation?order_id=${orderRes.data.order_id}`
             });
           } else {
