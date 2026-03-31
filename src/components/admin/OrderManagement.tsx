@@ -308,18 +308,11 @@ export default function OrderManagement() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
-  // Auto-refresh orders every 30 seconds
+  // Initial load only - remove auto-refresh to prevent continuous API calls
   useEffect(() => {
     listAdminOrders();
     setLastRefreshed(new Date());
-
-    const interval = setInterval(() => {
-      listAdminOrders();
-      setLastRefreshed(new Date());
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -543,7 +536,6 @@ export default function OrderManagement() {
                 <option value="pending">Pending</option>
                 <option value="paid">Paid</option>
                 <option value="failed">Failed</option>
-                <option value="refunded">Refunded</option>
               </select>
               
               <Button 
@@ -552,7 +544,7 @@ export default function OrderManagement() {
                 className="rounded-xl"
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
-                title="Refresh orders (auto-refreshes every 30 seconds)"
+                title="Refresh orders"
               >
                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
