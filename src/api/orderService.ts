@@ -75,7 +75,7 @@ export type OrderListQuery = {
 
 export type AdminOrderListQuery = {
   search?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'delivered';
+  status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   payment_status?: 'pending' | 'paid' | 'failed';
   payment_method?: PaymentMethod;
   start_date?: string; // `Y-m-d`
