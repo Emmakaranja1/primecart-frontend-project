@@ -75,7 +75,7 @@ export type OrderListQuery = {
 
 export type AdminOrderListQuery = {
   search?: string;
-  status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status?: 'pending' | 'approved' | 'rejected' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   payment_status?: 'pending' | 'paid' | 'failed';
   payment_method?: PaymentMethod;
   start_date?: string; // `Y-m-d`
@@ -85,7 +85,7 @@ export type AdminOrderListQuery = {
 };
 
 export type UpdateOrderStatusRequest = {
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
 };
 
@@ -157,7 +157,7 @@ export const orderService = {
   },
 
   updateOrderStatus: async (id: number, payload: UpdateOrderStatusRequest): Promise<ApiResponse<UpdateOrderStatusData>> => {
-    return httpClient.put<UpdateOrderStatusData>(`/admin/orders/${id}/status`, payload);
+    return httpClient.post<UpdateOrderStatusData>(`/admin/orders/${id}/status`, payload);
   },
 
   deleteOrder: async (id: number): Promise<ApiResponse<never>> => {

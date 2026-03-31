@@ -258,7 +258,11 @@ class HttpClient {
   }
 
   public async delete<T = unknown>(url: string): Promise<ApiResponse<T>> {
-    const response = await this.instance.delete(url);
+    const response = await this.instance.delete(url, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
     return response.data as ApiResponse<T>;
   }
 

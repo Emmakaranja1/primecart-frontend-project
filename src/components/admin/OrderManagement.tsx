@@ -14,7 +14,6 @@ import {
   MapPin,
   CreditCard,
   DollarSign,
-  AlertCircle,
   Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
@@ -43,11 +42,12 @@ const transformOrderData = (apiOrder: AdminOrderListItem) => ({
 const getStatusBadge = (status: string) => {
   const variants: Record<string, 'success' | 'warning' | 'destructive' | 'default'> = {
     pending: 'warning',
+    approved: 'success',
+    rejected: 'destructive',
     processing: 'default',
     shipped: 'default',
     delivered: 'success',
     cancelled: 'destructive',
-    refunded: 'destructive',
   };
   return variants[status] || 'default';
 };
@@ -65,11 +65,12 @@ const getPaymentStatusBadge = (status: string) => {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'pending': return <Clock className="w-4 h-4" />;
+    case 'approved': return <CheckCircle className="w-4 h-4" />;
+    case 'rejected': return <XCircle className="w-4 h-4" />;
     case 'processing': return <Package className="w-4 h-4" />;
     case 'shipped': return <Truck className="w-4 h-4" />;
     case 'delivered': return <CheckCircle className="w-4 h-4" />;
     case 'cancelled': return <XCircle className="w-4 h-4" />;
-    case 'refunded': return <AlertCircle className="w-4 h-4" />;
     default: return null;
   }
 };
@@ -77,7 +78,7 @@ const getStatusIcon = (status: string) => {
 const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus, onDeleteOrder }: { 
   order: AdminOrderListItem & { order_number: string; customer_name: string; customer_email: string }; 
   onClose: () => void; 
-  onUpdateOrderStatus: (orderId: number, payload: { status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }) => Promise<void>;
+  onUpdateOrderStatus: (orderId: number, payload: { status: 'pending' | 'approved' | 'rejected' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }) => Promise<void>;
   onDeleteOrder: (orderId: number) => Promise<void>;
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -250,6 +251,8 @@ const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus, onDeleteOrder 
                   className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none focus:bg-white dark:focus:bg-slate-700 text-slate-900 dark:text-white font-medium"
                 >
                   <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
                   <option value="processing">Processing</option>
                   <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>
@@ -357,7 +360,7 @@ export default function OrderManagement() {
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId: number, payload: { status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }) => {
+  const handleUpdateOrderStatus = async (orderId: number, payload: { status: 'pending' | 'approved' | 'rejected' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }) => {
     try {
       await updateOrderStatus(orderId, payload);
       toast.success(`Order status updated to ${payload.status}`);
@@ -521,6 +524,8 @@ export default function OrderManagement() {
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
                 <option value="processing">Processing</option>
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
