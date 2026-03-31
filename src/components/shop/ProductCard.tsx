@@ -5,6 +5,7 @@ import { Button } from '@/ui/Button';
 import { Badge } from '@/ui/Badge';
 import type { Product } from '@/types/product';
 import { formatCurrency } from '@/utils/helpers';
+import { getProductImage } from '@/utils/imageUtils';
 import { useCart } from '@/hooks/useCart';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
@@ -18,30 +19,6 @@ const getProductRating = (productId: number): number => {
   
   const seed = productId % 100;
   return 3.5 + (seed % 15) / 10;
-};
-
-const getProductImage = (product: Product) => {
-  if (product.image) {
-    let imageUrl = product.image.trim();
-    
-    if (imageUrl) {
-      
-      if (imageUrl.startsWith('ttps://')) {
-        imageUrl = 'https://' + imageUrl.substring(7); 
-      } else if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-        imageUrl = `https://${imageUrl}`;
-      }
-      
-      try {
-        new URL(imageUrl);
-        return imageUrl;
-      } catch {
-        return `https://picsum.photos/seed/${product.id}/600/800`;
-      }
-    }
-  }
-  
-  return `https://picsum.photos/seed/${product.id}/600/800`;
 };
 
 const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -83,7 +60,7 @@ return (
         {/* Image Container */}
         <div className="relative aspect-[4/5] overflow-hidden bg-slate-50 dark:bg-slate-800">
           <img
-            src={getProductImage(product)}
+            src={getProductImage(product.image, `seed/${product.id}/600/800`)}
             alt={product.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             referrerPolicy="no-referrer"

@@ -18,6 +18,7 @@ import { Badge } from '@/ui/Badge';
 import { Button } from '@/ui/Button';
 import { Input } from '@/ui/Input';
 import { formatCurrency } from '@/utils/helpers';
+import { getProductImage } from '@/utils/imageUtils';
 import { toast } from 'sonner';
 import { CATEGORIES } from '@/utils/constants';
 import type { Product, AdminUpdateProductRequest } from '@/api/productService';
@@ -202,32 +203,6 @@ export default function ProductManagement() {
 
   const getFeaturedBadge = (featured: boolean) => {
     return featured ? 'default' : 'secondary';
-  };
-
-  const getProductImage = (product: Product) => {
-    if (product.image) {
-      let imageUrl = product.image.trim();
-      
-      
-      if (imageUrl) {
-        
-        if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-          imageUrl = `https://${imageUrl}`;
-        }
-        
-        
-        try {
-          new URL(imageUrl);
-          return imageUrl;
-        } catch {
-          
-          return `https://picsum.photos/seed/${product.id}/200/200.jpg`;
-        }
-      }
-    }
-    
-    
-    return `https://picsum.photos/seed/${product.id}/200/200.jpg`;
   };
 
   if (isLoading) {
@@ -535,7 +510,7 @@ export default function ProductManagement() {
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-3">
                         <img
-                          src={getProductImage(product)}
+                          src={getProductImage(product.image, `seed/${product.id}/200/200`)}
                           alt={product.title}
                           className="w-12 h-12 rounded-lg object-cover"
                         />

@@ -2,6 +2,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/ui/Button';
 import { formatCurrency } from '@/utils/helpers';
+import { getProductImage } from '@/utils/imageUtils';
 import type { CartItem as CartItemType } from '@/types/cart';
 
 interface CartItemProps {
@@ -24,7 +25,7 @@ export default function CartItem({ item, onUpdateQuantity, onRemove }: CartItemP
       {/* Product Image */}
       <div className="w-full sm:w-32 h-32 rounded-2xl overflow-hidden bg-slate-50 flex-shrink-0 relative">
         <img 
-          src={product.image?.startsWith('http') ? product.image : `https://${product.image || 'picsum.photos/seed/product/400/500'}`} 
+          src={getProductImage(product.image, 'seed/product/400/500')}
           alt={product.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           referrerPolicy="no-referrer"

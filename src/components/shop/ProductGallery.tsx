@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { cn } from '@/utils/helpers';
+import { getProductImage } from '@/utils/imageUtils';
 import type { Product } from '@/types/product';
 
 interface ProductGalleryProps {
@@ -13,7 +14,7 @@ interface ProductGalleryProps {
 
 export default function ProductGallery({ product, images, className }: ProductGalleryProps) {
   
-  const galleryImages = images || (product?.image ? [product.image] : []);
+  const galleryImages = images ? images.map(img => getProductImage(img, 'seed/product/800/1000')) : (product?.image ? [getProductImage(product.image, 'seed/product/800/1000')] : []);
   
   
   if (galleryImages.length === 0) {

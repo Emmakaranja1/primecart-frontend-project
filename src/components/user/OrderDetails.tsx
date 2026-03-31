@@ -2,6 +2,7 @@ import { Package, CreditCard, Calendar, MapPin, ExternalLink } from 'lucide-reac
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { Badge } from '../../ui/Badge';
 import { formatCurrency, formatDate, cn } from '../../utils/helpers';
+import { getProductImage } from '../../utils/imageUtils';
 import { Link } from 'react-router-dom';
 import type { OrderDetailsData } from '../../api/orderService';
 
@@ -76,7 +77,7 @@ export default function OrderDetails({ orderData, className }: OrderDetailsProps
                   <div key={item.id} className="flex items-center gap-8 group">
                     <div className="w-24 h-24 rounded-2xl bg-slate-50 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-100 dark:border-slate-800">
                       <img 
-                        src={item.product.image || 'https://picsum.photos/seed/product/200/200'} 
+                        src={getProductImage(item.product.image, 'seed/product/200/200')} 
                         alt={item.product.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         referrerPolicy="no-referrer"
