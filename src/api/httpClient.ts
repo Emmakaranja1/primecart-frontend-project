@@ -127,6 +127,11 @@ class HttpClient {
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => response,
       (error: AxiosError) => {
+        
+        if (error.config?.responseType === 'blob' && error.response?.data instanceof Blob) {
+          return Promise.reject(error);
+        }
+        
         if (error.response?.status === 401) {
           this.handleUnauthorized();
         }
@@ -260,7 +265,7 @@ class HttpClient {
   public async delete<T = unknown>(url: string): Promise<ApiResponse<T>> {
     const response = await this.instance.delete(url, {
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
     });
     return response.data as ApiResponse<T>;

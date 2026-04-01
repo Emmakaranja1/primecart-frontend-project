@@ -88,7 +88,7 @@ export const productService = {
   },
 
   updateProduct: async (id: number, payload: AdminUpdateProductRequest) => {
-    return httpClient.put<{ product: Product }>(`/admin/products/${id}`, payload);
+    return httpClient.post<{ product: Product }>(`/admin/products/${id}`, payload);
   },
 
   deleteProduct: async (id: number): Promise<DeleteProductResponse> => {

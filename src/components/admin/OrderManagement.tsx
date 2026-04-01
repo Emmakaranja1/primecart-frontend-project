@@ -8,12 +8,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Download,
   RefreshCw,
   User,
   MapPin,
   CreditCard,
-  DollarSign,
   Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
@@ -93,7 +91,7 @@ const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus, onDeleteOrder 
 
   const handleSaveChanges = async () => {
     if (hasChanges && selectedStatus !== order.status) {
-      await onUpdateOrderStatus(order.id, { status: selectedStatus as any });
+      await onUpdateOrderStatus(order.id, { status: selectedStatus as 'pending' | 'approved' | 'rejected' | 'processing' | 'shipped' | 'delivered' | 'cancelled' });
     }
     onClose();
   };
@@ -104,7 +102,7 @@ const OrderDetailsModal = ({ order, onClose, onUpdateOrderStatus, onDeleteOrder 
       await onDeleteOrder(order.id);
       setShowDeleteConfirm(false);
       onClose();
-    } catch (error) {
+    } catch {
       setIsDeleting(false);
     }
   };
@@ -323,7 +321,7 @@ export default function OrderManagement() {
       await listAdminOrders();
       setLastRefreshed(new Date());
       toast.success('Orders refreshed');
-    } catch (error) {
+    } catch {
       toast.error('Failed to refresh orders');
     } finally {
       setIsRefreshing(false);
@@ -384,10 +382,6 @@ export default function OrderManagement() {
     }
   };
 
-  const handleExportOrders = () => {
-    toast.success('Orders exported successfully');
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -423,26 +417,33 @@ export default function OrderManagement() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm" className="rounded-xl" onClick={handleExportOrders}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="rounded-xl bg-emerald-600 dark:bg-emerald-700 text-white border-emerald-700 dark:border-emerald-800 hover:bg-emerald-700 dark:hover:bg-emerald-800 shadow-lg shadow-emerald-200/50 dark:shadow-none transition-all duration-200 font-semibold"
+            onClick={handleManualRefresh} 
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+        {/* Row 1: Key Metrics */}
+        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900 lg:col-span-2">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Orders</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                   {orders.length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
+                <ShoppingCart className="w-8 h-8 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </CardContent>
@@ -453,28 +454,29 @@ export default function OrderManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Pending</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                   {orders.filter(o => o.status === 'pending').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/20 dark:to-yellow-900/20 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/20 dark:to-yellow-900/20 flex items-center justify-center">
+                <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Row 2: Processing & Approved */}
         <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Processing</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
                   {orders.filter(o => o.status === 'processing').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center">
-                <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 flex items-center justify-center">
+                <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -484,16 +486,63 @@ export default function OrderManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Revenue</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                  {formatCurrency(orders.reduce((sum, order) => {
-                    const amount = typeof order.total_amount === 'string' ? parseFloat(order.total_amount) : order.total_amount;
-                    return sum + amount;
-                  }, 0))}
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Approved</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                  {orders.filter(o => o.status === 'approved').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Row 3: Shipped & Delivered */}
+        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Shipped</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                  {orders.filter(o => o.status === 'shipped').length}
+                </p>
+              </div>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/20 dark:to-purple-900/20 flex items-center justify-center">
+                <Truck className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Delivered</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                  {orders.filter(o => o.status === 'delivered').length}
+                </p>
+              </div>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Row 4: Cancelled */}
+        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Cancelled</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                  {orders.filter(o => o.status === 'cancelled').length}
+                </p>
+              </div>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/20 dark:to-pink-900/20 flex items-center justify-center">
+                <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </CardContent>

@@ -257,27 +257,38 @@ export const useProductStore = create<ProductStore>((set) => ({
     try {
       const response = await productService.deleteProduct(id);
       
-      
-      set(state => {
-        if (state.adminProducts?.products) {
-          const updatedProducts = state.adminProducts.products.filter(product => product.id !== id);
-          return {
-            ...state,
-            adminProducts: {
-              ...state.adminProducts,
-              products: updatedProducts,
-              pagination: {
-                ...state.adminProducts.pagination,
-                total: state.adminProducts.pagination.total - 1
-              }
-            },
-            isLoading: false,
-            error: null,
-            message: response.message || 'Product deleted successfully',
-          };
-        }
-        return { ...state, isLoading: false, error: null, message: null };
-      });
+      // Only update state if deletion was successful
+      if (response && response.success) {
+        set(state => {
+          if (state.adminProducts?.products) {
+            const updatedProducts = state.adminProducts.products.filter(product => product.id !== id);
+            return {
+              ...state,
+              adminProducts: {
+                ...state.adminProducts,
+                products: updatedProducts,
+                pagination: {
+                  ...state.adminProducts.pagination,
+                  total: state.adminProducts.pagination.total - 1
+                }
+              },
+              isLoading: false,
+              error: null,
+              message: response.message || 'Product deleted successfully',
+            };
+          }
+          return state;
+        });
+      } else {
+        // Backend returned error response
+        const errorResponse = response as { success: false; message: string; status?: number };
+        set({
+          isLoading: false,
+          error: errorResponse,
+          message: null,
+        });
+        throw errorResponse;
+      }
       
       return response;
     } catch (error) {

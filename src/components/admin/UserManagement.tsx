@@ -8,7 +8,6 @@ import {
   XCircle,
   Phone,
   MapPin,
-  Download,
   RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
@@ -137,10 +136,6 @@ export default function UserManagement() {
     }
   };
 
-  const handleExportUsers = () => {
-    toast.success('Users exported successfully');
-  };
-
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'success' | 'warning' | 'destructive' | 'default'> = {
       active: 'success',
@@ -211,15 +206,6 @@ export default function UserManagement() {
         </div>
         
         <div className="flex items-center space-x-3">
-          <Button 
-            variant="default" 
-            size="sm" 
-            className="rounded-xl bg-blue-600 dark:bg-blue-700 text-white border-blue-700 dark:border-blue-800 hover:bg-blue-700 dark:hover:bg-blue-800 shadow-lg shadow-blue-200/50 dark:shadow-none transition-all duration-200"
-            onClick={handleExportUsers}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
           <Button 
             variant="default" 
             size="sm" 

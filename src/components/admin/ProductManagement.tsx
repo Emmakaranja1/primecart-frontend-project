@@ -7,11 +7,8 @@ import {
   Tag,
   TrendingUp,
   Star,
-  Download,
   RefreshCw,
-  Package,
-  Eye,
-  EyeOff
+  Package
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/Card';
 import { Badge } from '@/ui/Badge';
@@ -20,8 +17,8 @@ import { Input } from '@/ui/Input';
 import { formatCurrency } from '@/utils/helpers';
 import { getProductImage } from '@/utils/imageUtils';
 import { toast } from 'sonner';
-import { CATEGORIES } from '@/utils/constants';
-import type { Product, AdminUpdateProductRequest } from '@/api/productService';
+import { CATEGORIES, BRANDS } from '@/constants/categories';
+import type { Product } from '@/api/productService';
 import { useProductStore } from '@/stores/productStore';
 import ProductForm from './ProductForm';
 
@@ -40,7 +37,6 @@ export default function ProductManagement() {
     isLoading, 
     error,
     listAdminProducts,
-    updateProduct,
     deleteProduct,
     clearErrors
   } = useProductStore();
@@ -74,7 +70,8 @@ export default function ProductManagement() {
     }
   }, [error, clearErrors]);
 
-  const uniqueCategories = CATEGORIES.map(cat => cat.value);
+  const uniqueCategories = CATEGORIES;
+  const uniqueBrands = BRANDS;
 
   const filteredProducts = (productsData?.products || []).filter((product: Product) => {
     const matchesSearch = product.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -115,26 +112,24 @@ export default function ProductManagement() {
       setDeleteConfirmProductId(null);
       toast.success('Product deleted successfully');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to delete product: ${errorMessage}`);
-    }
-  };
-
-  const handleToggleStatus = async (productId: number, currentStatus: boolean) => {
-    try {
-      await updateProduct(productId, { is_active: !currentStatus } as AdminUpdateProductRequest);
-      toast.success(`Product ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-    } catch {
-      toast.error('Failed to update product status');
-    }
-  };
-
-  const handleToggleFeatured = async (productId: number, currentFeatured: boolean) => {
-    try {
-      await updateProduct(productId, { featured: !currentFeatured } as AdminUpdateProductRequest);
-      toast.success(`Product ${!currentFeatured ? 'featured' : 'unfeatured'} successfully`);
-    } catch {
-      toast.error('Failed to update product featured status');
+      console.error('Delete product error:', error);
+      
+      // Handle different error types
+      if (error && typeof error === 'object' && 'success' in error) {
+        // Backend returned error response
+        const backendError = error as { success: boolean; message: string; status?: number };
+        if (backendError.status === 400) {
+          toast.error(backendError.message || 'Cannot delete product due to constraints');
+        } else if (backendError.status === 404) {
+          toast.error('Product not found');
+        } else {
+          toast.error(backendError.message || 'Failed to delete product');
+        }
+      } else {
+        // Network or other error
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to delete product: ${errorMessage}`);
+      }
     }
   };
 
@@ -149,52 +144,6 @@ export default function ProductManagement() {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  const handleExportProducts = () => {
-    const productsToExport = filteredProducts.map(product => ({
-      ID: product.id,
-      Title: product.title,
-      Description: product.description || '',
-      Price: product.price,
-      Category: product.category || '',
-      Brand: product.brand || '',
-      Quantity: product.quantity || 0,
-      Status: product.is_active ? 'Active' : 'Inactive',
-      Featured: product.featured ? 'Yes' : 'No',
-      'Created At': product.created_at || '',
-    }));
-
-    const csv = convertToCSV(productsToExport);
-    downloadCSV(csv, 'products-export.csv');
-    toast.success('Products exported successfully');
-  };
-
-  const convertToCSV = (data: Record<string, unknown>[]) => {
-    if (data.length === 0) return '';
-    
-    const headers = Object.keys(data[0]);
-    const csvHeaders = headers.join(',');
-    const csvRows = data.map(row => 
-      headers.map(header => {
-        const value = row[header];
-        return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
-      }).join(',')
-    );
-
-    return [csvHeaders, ...csvRows].join('\n');
-  };
-
-  const downloadCSV = (csv: string, filename: string) => {
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const getStatusBadge = (isActive: boolean) => {
@@ -268,15 +217,6 @@ export default function ProductManagement() {
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Product
-          </Button>
-          <Button 
-            variant="default" 
-            size="sm" 
-            className="rounded-xl bg-blue-600 dark:bg-blue-700 text-white border-blue-700 dark:border-blue-800 hover:bg-blue-700 dark:hover:bg-blue-800 shadow-lg shadow-blue-200/50 dark:shadow-none transition-all duration-200"
-            onClick={handleExportProducts}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export
           </Button>
           <Button 
             variant="default" 
@@ -363,6 +303,22 @@ export default function ProductManagement() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none dark:bg-slate-900">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Brands</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                  {uniqueBrands.length}
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center">
+                <Package className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -399,10 +355,8 @@ export default function ProductManagement() {
                 className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-none focus:bg-white dark:focus:bg-slate-700 text-slate-900 dark:text-white font-medium"
               >
                 <option value="all">All Brands</option>
-                {Array.from(new Set(productsData?.products?.map(p => p.brand).filter((brand): brand is string => brand !== null) || []))
-                .sort()
-                .map((brand: string, index: number) => (
-                  <option key={`${brand}-${index}`} value={brand}>{brand}</option>
+                {uniqueBrands.map((brand: string) => (
+                  <option key={brand} value={brand}>{brand}</option>
                 ))}
               </select>
               
@@ -583,46 +537,6 @@ export default function ProductManagement() {
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-lg text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all duration-200 shadow-sm"
-                            onClick={() => handleToggleStatus(product.id, product.is_active || false)}
-                            title={product.is_active ? 'Deactivate product' : 'Activate product'}
-                          >
-                            {product.is_active ? (
-                              <>
-                                <EyeOff className="w-3 h-3 mr-1" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="w-3 h-3 mr-1" />
-                                Activate
-                              </>
-                            )}
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-lg text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all duration-200 shadow-sm"
-                            onClick={() => handleToggleFeatured(product.id, product.featured || false)}
-                            title={product.featured ? 'Remove from featured' : 'Add to featured'}
-                          >
-                            {product.featured ? (
-                              <>
-                                <Star className="w-3 h-3 mr-1" />
-                                Unfeature
-                              </>
-                            ) : (
-                              <>
-                                <Star className="w-3 h-3 mr-1" />
-                                Feature
-                              </>
-                            )}
-                          </Button>
-                          
                           <Button
                             variant="outline"
                             size="sm"
