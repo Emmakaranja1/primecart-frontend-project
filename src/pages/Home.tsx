@@ -61,7 +61,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
               <Link to="/products">
-                <Button size="lg" className="rounded-full px-10 h-14 text-lg group">
+                <Button size="lg" className="rounded-full px-10 h-14 text-lg text-white group">
                   Shop Collection
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>

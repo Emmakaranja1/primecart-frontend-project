@@ -45,7 +45,7 @@ export const cartService = {
     id: number,
     payload: UpdateCartItemRequest,
   ): Promise<CartMutationResponse> => {
-    return httpClient.put<never>(`/cart/${id}`, payload);
+    return httpClient.post<never>(`/cart/${id}`, payload);
   },
 
   removeCartItem: async (id: number): Promise<CartMutationResponse> => {
