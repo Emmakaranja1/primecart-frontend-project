@@ -59,8 +59,8 @@ const UsersTable = ({ data }: { data: UsersReportData }) => (
         </tr>
       </thead>
       <tbody>
-        {data.users.map((user) => (
-          <tr key={user.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+        {data.users.map((user, index) => (
+          <tr key={`user-${user.id}-${index}`} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
             <td className="px-6 py-4">{user.id}</td>
             <td className="px-6 py-4">{user.username}</td>
             <td className="px-6 py-4">{user.email}</td>
@@ -93,8 +93,8 @@ const OrdersTable = ({ data }: { data: OrdersReportData }) => (
         </tr>
       </thead>
       <tbody>
-        {data.orders.map((order) => (
-          <tr key={order.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+        {data.orders.map((order, index) => (
+          <tr key={`order-${order.id}-${index}`} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
             <td className="px-6 py-4">{order.id}</td>
             <td className="px-6 py-4">{order.user_id}</td>
             <td className="px-6 py-4">${typeof order.total_amount === 'string' ? parseFloat(order.total_amount).toFixed(2) : order.total_amount.toFixed(2)}</td>
@@ -139,8 +139,8 @@ const ActivityTable = ({ data }: { data: ActivityReportData }) => (
         </tr>
       </thead>
       <tbody>
-        {data.activities.map((activity) => (
-          <tr key={activity.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+        {data.activities.map((activity, index) => (
+          <tr key={`activity-${activity.id}-${index}`} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
             <td className="px-6 py-4">{activity.id}</td>
             <td className="px-6 py-4">
               {activity.user ? `${activity.user.username} (${activity.user.email})` : `User ${activity.user_id}`}
@@ -167,6 +167,7 @@ export default function ReportsView() {
     activityReport,
     isLoading,
     error,
+    exportProgress,
     getUsersReport,
     getOrdersReport,
     getActivityReport,
@@ -199,17 +200,73 @@ export default function ReportsView() {
         end_date: end
       });
       
+      // Validate blob before download
+      if (!blob || blob.size === 0) {
+        throw new Error('Received empty file from server');
+      }
       
+      // Additional validation for Excel files
+      if (format === 'excel') {
+        // Excel files should have a minimum size and proper MIME type
+        if (blob.size < 1024) {
+          console.warn('Excel file seems too small, might be corrupted:', { size: blob.size });
+        }
+        
+        // Check if it's actually a valid Excel file by checking the first few bytes
+        const arrayBuffer = await blob.slice(0, 4).arrayBuffer();
+        const header = new Uint8Array(arrayBuffer);
+        // Excel files start with PK (ZIP signature)
+        if (header[0] !== 0x50 || header[1] !== 0x4B) {
+          console.warn('File does not appear to be a valid Excel file');
+        }
+      }
+      
+      console.log('Download details:', {
+        size: blob.size,
+        type: blob.type,
+        format: format,
+        mimeType: blob.type
+      });
+      
+      // Generate proper filename with correct extension
+      const extension = format === 'excel' ? 'xlsx' : 'pdf';
+      const dateRange = start && end ? `_${start}_to_${end}` : '';
+      const filename = `${reportType}_report${dateRange}.${extension}`;
+      
+      // Create download link with proper MIME type handling
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${reportType}-report-${timeRange}.${format}`;
+      a.download = filename;
+      a.style.display = 'none';
+      
+      // Add to DOM, trigger click, then cleanup
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Wait a moment before cleanup to ensure download starts
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+      
+      console.log(`✅ Download triggered: ${filename} (${blob.size} bytes)`);
+      
     } catch (error) {
       console.error('Export failed:', error);
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // More specific error handling
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        alert('Export failed: You are not authorized to export reports. Please log in again.');
+      } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+        alert('Export failed: You do not have permission to export reports.');
+      } else if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+        alert('Export failed: Server error occurred. Please try again later.');
+      } else {
+        alert(`Export failed: ${errorMessage}`);
+      }
     }
   };
 
@@ -326,18 +383,20 @@ export default function ReportsView() {
                 size="sm" 
                 className="rounded-xl"
                 onClick={() => handleExportReport('users', 'excel')}
+                disabled={isLoading && exportProgress !== null}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export Excel
+                {isLoading && exportProgress !== null ? `Exporting ${exportProgress}%` : 'Export Excel'}
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="rounded-xl"
                 onClick={() => handleExportReport('users', 'pdf')}
+                disabled={isLoading && exportProgress !== null}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export PDF
+                {isLoading && exportProgress !== null ? `Exporting ${exportProgress}%` : 'Export PDF'}
               </Button>
             </div>
           </CardHeader>
@@ -365,18 +424,20 @@ export default function ReportsView() {
                 size="sm" 
                 className="rounded-xl"
                 onClick={() => handleExportReport('orders', 'excel')}
+                disabled={isLoading && exportProgress !== null}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export Excel
+                {isLoading && exportProgress !== null ? `Exporting ${exportProgress}%` : 'Export Excel'}
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="rounded-xl"
                 onClick={() => handleExportReport('orders', 'pdf')}
+                disabled={isLoading && exportProgress !== null}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export PDF
+                {isLoading && exportProgress !== null ? `Exporting ${exportProgress}%` : 'Export PDF'}
               </Button>
             </div>
           </CardHeader>
@@ -404,18 +465,20 @@ export default function ReportsView() {
                 size="sm" 
                 className="rounded-xl"
                 onClick={() => handleExportReport('activity', 'excel')}
+                disabled={isLoading && exportProgress !== null}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export Excel
+                {isLoading && exportProgress !== null ? `Exporting ${exportProgress}%` : 'Export Excel'}
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="rounded-xl"
                 onClick={() => handleExportReport('activity', 'pdf')}
+                disabled={isLoading && exportProgress !== null}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export PDF
+                {isLoading && exportProgress !== null ? `Exporting ${exportProgress}%` : 'Export PDF'}
               </Button>
             </div>
           </CardHeader>

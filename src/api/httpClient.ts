@@ -125,11 +125,37 @@ class HttpClient {
 
   private setupResponseInterceptor(): void {
     this.instance.interceptors.response.use(
-      (response: AxiosResponse) => response,
+      (response: AxiosResponse) => {
+        
+        if (response.config.responseType === 'blob') {
+          return response;
+        }
+        return response;
+      },
       (error: AxiosError) => {
         
         if (error.config?.responseType === 'blob' && error.response?.data instanceof Blob) {
-          return Promise.reject(error);
+          return new Promise<never>((_, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              try {
+                const errorText = reader.result as string;
+                const errorObj = JSON.parse(errorText);
+                reject(this.normalizeError({ 
+                  ...error, 
+                  response: error.response ? { ...error.response, data: errorObj } : undefined
+                } as AxiosError));
+              } catch {
+                reject(error);
+              }
+            };
+            reader.onerror = () => reject(error);
+            if (error.response) {
+              reader.readAsText(error.response.data as Blob);
+            } else {
+              reject(error);
+            }
+          });
         }
         
         if (error.response?.status === 401) {
@@ -269,6 +295,23 @@ class HttpClient {
       },
     });
     return response.data as ApiResponse<T>;
+  }
+
+  
+  public async postBlob(url: string, data?: unknown, onProgress?: (progress: number) => void): Promise<Blob> {
+    const response = await this.instance.post(url, data, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,*/*'
+      },
+      onDownloadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(progress);
+        }
+      }
+    });
+    return response.data;
   }
 
   

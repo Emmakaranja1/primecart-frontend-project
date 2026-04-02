@@ -144,20 +144,8 @@ export const reportService = {
     return httpClient.get<ActivityReportData>('/admin/reports/activity', params);
   },
 
-  exportReport: async (payload: ExportReportPayload): Promise<ExportReportResponse> => {
-    const res = await httpClient.axiosInstance.post<Blob>(
-      '/admin/reports/export',
-      payload,
-      {
-        responseType: 'blob',
-        headers: {
-          'Accept': payload.format === 'excel' 
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,*/*'
-            : 'application/pdf,*/*'
-        }
-      },
-    );
-    return res.data;
+  exportReport: async (payload: ExportReportPayload, onProgress?: (progress: number) => void): Promise<ExportReportResponse> => {
+    return httpClient.postBlob('/admin/reports/export', payload, onProgress);
   },
 };
 

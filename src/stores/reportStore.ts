@@ -20,6 +20,7 @@ type ReportStoreState = {
   isLoading: boolean;
   error: ApiError | null;
   message: string | null;
+  exportProgress: number | null;
 
   getUsersReport: (params?: UsersReportQuery) => Promise<ApiResponse<UsersReportData>>;
   getOrdersReport: (params?: OrdersReportQuery) => Promise<ApiResponse<OrdersReportData>>;
@@ -27,7 +28,7 @@ type ReportStoreState = {
     params?: ActivityReportQuery,
   ) => Promise<ApiResponse<ActivityReportData>>;
 
-  exportReport: (payload: ExportReportPayload) => Promise<Blob>;
+  exportReport: (payload: ExportReportPayload, onProgress?: (progress: number) => void) => Promise<Blob>;
 };
 
 function normalizeApiError(error: unknown): ApiError {
@@ -55,6 +56,7 @@ export const useReportStore = create<ReportStoreState>((set) => ({
   isLoading: false,
   error: null,
   message: null,
+  exportProgress: null,
 
   getUsersReport: async (params) => {
     set({ isLoading: true, error: null, message: null });
@@ -95,15 +97,18 @@ export const useReportStore = create<ReportStoreState>((set) => ({
     }
   },
 
-  exportReport: async (payload) => {
-    set({ isLoading: true, error: null, message: null });
+  exportReport: async (payload, onProgress) => {
+    set({ isLoading: true, error: null, message: null, exportProgress: 0 });
     try {
-      const blob = await reportService.exportReport(payload);
-      set({ exportedBlob: blob, message: 'Report exported', isLoading: false });
+      const blob = await reportService.exportReport(payload, (progress) => {
+        set({ exportProgress: progress });
+        onProgress?.(progress);
+      });
+      set({ exportedBlob: blob, message: 'Report exported', isLoading: false, exportProgress: null });
       return blob;
     } catch (e) {
       const apiError = normalizeApiError(e);
-      set({ error: apiError, isLoading: false });
+      set({ error: apiError, isLoading: false, exportProgress: null });
       throw apiError;
     }
   },
