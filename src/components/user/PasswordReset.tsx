@@ -87,7 +87,7 @@ export default function PasswordReset() {
           </div>
           <Button 
             type="submit" 
-            className="w-full h-16 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
+            className="w-full h-16 rounded-2xl text-lg font-black text-white shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
             disabled={isLoading}
           >
             <span>{isLoading ? 'Sending...' : 'Send Reset Code'}</span>
@@ -114,7 +114,7 @@ export default function PasswordReset() {
           </div>
           <Button 
             type="submit" 
-            className="w-full h-16 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
+            className="w-full h-16 rounded-2xl text-lg font-black text-white shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
             disabled={isLoading}
           >
             <span>{isLoading ? 'Verifying...' : 'Verify Code'}</span>
@@ -171,7 +171,7 @@ export default function PasswordReset() {
           </div>
           <Button 
             type="submit" 
-            className="w-full h-16 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
+            className="w-full h-16 rounded-2xl text-lg font-black text-white shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all group"
             disabled={isLoading}
           >
             <span>{isLoading ? 'Resetting...' : 'Reset Password'}</span>

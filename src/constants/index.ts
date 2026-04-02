@@ -1,4 +1,4 @@
-export const APP_NAME = 'LuxeCommerce';
+export const APP_NAME = 'PrimeCart';
 export const APP_DESCRIPTION = 'Premium eCommerce platform for high-end products.';
 
 export const CATEGORIES = [

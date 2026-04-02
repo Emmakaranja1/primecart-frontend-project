@@ -47,7 +47,7 @@ class HttpClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000,
+      timeout: 10000,
     });
 
     this.setupRequestInterceptor();
@@ -182,6 +182,12 @@ class HttpClient {
     console.error('API Error Details:', errorDetails);
 
     if (!error.response) {
+      if (error.code === 'ECONNABORTED') {
+        return {
+          success: false,
+          message: 'Request timed out. The server may be busy or temporarily unavailable. Please try again.',
+        };
+      }
       return {
         success: false,
         message: 'Network error. Please check your internet connection.',

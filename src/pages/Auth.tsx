@@ -96,7 +96,7 @@ export default function Auth() {
               transition={{ delay: 0.2 }}
               className="text-xl text-slate-400 font-medium leading-relaxed"
             >
-              Join thousands of satisfied customers who trust LuxeCommerce for their premium shopping needs.
+              Join thousands of satisfied customers who trust PrimeCart for their premium shopping needs.
             </motion.p>
           </div>
 
